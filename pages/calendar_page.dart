@@ -26,7 +26,6 @@ class _CalendarPageState extends State<CalendarPage> {
   /// we’ll just show all clubs on every day.
   List<Club> _meetingsForDay(DateTime day) {
     return widget.clubs;
-    print("testing claire's branch");
   }
 
   List<Map<String, dynamic>> _upcomingMeetings() {
