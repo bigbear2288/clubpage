@@ -267,8 +267,8 @@
     }
   ],
   "generator": "pub",
-  "generatorVersion": "3.10.4",
+  "generatorVersion": "3.10.7",
   "flutterRoot": "file:///Users/clairr/Downloads/flutter",
-  "flutterVersion": "3.38.5",
+  "flutterVersion": "3.38.7",
   "pubCache": "file:///Users/clairr/.pub-cache"
 }
