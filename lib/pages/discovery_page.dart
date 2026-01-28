@@ -25,25 +25,40 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
   void fetchClubs() async {
     try {
       final snapshot = await dbRef.get();
+      debugPrint('=== DEBUG INFO ===');
       debugPrint('Snapshot exists: ${snapshot.exists}');
-      debugPrint('Snapshot value: ${snapshot.value}');
 
       if (snapshot.exists) {
-        final data = snapshot.value as Map<dynamic, dynamic>;
+        final data = snapshot.value;
         final List<Club> loaded = [];
 
-        data.forEach((key, value) {
-          // Each `value` is a map of the club's fields
-          final Map<String, dynamic> clubMap = Map<String, dynamic>.from(value);
-
-          // The "CLUB" field in your DB is the club's name
-          loaded.add(Club.fromMap(clubMap));
-        });
+        // Check if data is a List or Map
+        if (data is List) {
+          // Data is a list
+          for (var item in data) {
+            if (item != null) {
+              final Map<String, dynamic> clubMap =
+                  Map<String, dynamic>.from(item);
+              loaded.add(Club.fromMap(clubMap));
+            }
+          }
+        } else if (data is Map) {
+          // Data is a map
+          final mapData = data as Map<dynamic, dynamic>;
+          mapData.forEach((key, value) {
+            if (value != null) {
+              final Map<String, dynamic> clubMap =
+                  Map<String, dynamic>.from(value);
+              loaded.add(Club.fromMap(clubMap));
+            }
+          });
+        }
 
         setState(() {
           clubs = loaded;
           isLoading = false;
         });
+        debugPrint('Loaded ${loaded.length} clubs');
       } else {
         setState(() {
           isLoading = false;
