@@ -1,7 +1,6 @@
 name: club
 description: "A new Flutter project."
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
@@ -10,15 +9,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
   # Flutter packages
   table_calendar: ^3.0.9
   cupertino_icons: ^1.0.8
-
   # Firebase
   cloud_firestore: ^6.1.1
   firebase_core: ^4.3.0
   firebase_database: ^12.1.1
+  firebase_auth: ^6.1.3
+  google_sign_in: ^6.2.2
 
 dev_dependencies:
   flutter_test:
