@@ -9,6 +9,7 @@ class Club {
   final String? room;
   final String? schedule;
   final String? time;
+  final String? description;
 
   Club({
     required this.name,
@@ -21,6 +22,7 @@ class Club {
     this.room,
     this.schedule,
     this.time,
+    this.description,
   });
 
   factory Club.fromMap(Map<String, dynamic> data) {
@@ -35,6 +37,7 @@ class Club {
       room: data['room'],
       schedule: data['schedule'],
       time: data['time'],
+      description: data['description'],
     );
   }
 }
