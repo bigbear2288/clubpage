@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-<<<<<<<<< Temporary merge branch 1
-=========
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'pages/discovery_page.dart';
 import 'pages/login_page.dart';
->>>>>>>>> Temporary merge branch 2
 
-void main() {
-  runApp(const MainApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -43,7 +44,6 @@ class MyApp extends StatelessWidget {
           // Otherwise show LoginPage
           return const LoginPage();
         },
->>>>>>>>> Temporary merge branch 2
       ),
     );
   }
