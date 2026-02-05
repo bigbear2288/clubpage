@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
-=======
->>>>>>> 2573024f833219232c979d1d04c42be698ae70d3
 import 'pages/discovery_page.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'pages/login_page.dart';
 
 void main() async {
@@ -32,19 +28,19 @@ class MyApp extends StatelessWidget {
           print('DEBUG - Connection state: ${snapshot.connectionState}');
           print('DEBUG - Has data: ${snapshot.hasData}');
           print('DEBUG - User: ${snapshot.data}');
-          
+
           // Show loading while checking auth state
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           }
-          
+
           // If user is logged in, show DiscoveryPage
           if (snapshot.hasData) {
             return const DiscoveryPage();
           }
-          
+
           // Otherwise show LoginPage
           return const LoginPage();
         },
