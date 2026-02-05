@@ -1,51 +1,39 @@
-// import 'package:flutter/material.dart';
-// import '../models/club.dart';
-
-// class ClubHomePage extends StatelessWidget {
-//   final Club club;
-
-//   const ClubHomePage({super.key, required this.club});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(title: Text(club.name)),
-//       body: Padding(
-//         padding: const EdgeInsets.all(16.0),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Text('Advisor 1: ${club.advisor1 ?? "N/A"}'),
-//             Text('Advisor 2: ${club.advisor2 ?? "N/A"}'),
-//             Text('Head 1: ${club.head1 ?? "N/A"}'),
-//             Text('Head 2: ${club.head2 ?? "N/A"}'),
-//             Text('Email Head 1: ${club.emailHead1 ?? "N/A"}'),
-//             Text('Email Head 2: ${club.emailHead2 ?? "N/A"}'),
-//             Text('Room: ${club.room ?? "N/A"}'),
-//             Text('Schedule: ${club.schedule ?? "N/A"}'),
-//             Text('Time: ${club.time ?? "N/A"}'),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
-// new format from claude
-// hello claire
 import 'package:flutter/material.dart';
 import '../models/club.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/user_service.dart';
 
-class ClubHomePage extends StatelessWidget {
+class ClubHomePage extends StatefulWidget {
   final Club club;
 
   const ClubHomePage({super.key, required this.club});
+
+  @override
+  State<ClubHomePage> createState() => _ClubHomePageState();
+}
+
+class _ClubHomePageState extends State<ClubHomePage> {
+  bool _isFollowing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFollowStatus();
+  }
+
+  Future<void> _checkFollowStatus() async {
+    final isFollowing = await UserService.isFollowingClub(widget.club.name);
+    setState(() {
+      _isFollowing = isFollowing;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: Text(club.name),
+        title: Text(widget.club.name),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -70,7 +58,7 @@ class ClubHomePage extends StatelessWidget {
                     radius: 40,
                     backgroundColor: Colors.white,
                     child: Text(
-                      club.name[0].toUpperCase(),
+                      widget.club.name.isNotEmpty ? widget.club.name[0].toUpperCase() : "?",
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -80,7 +68,7 @@ class ClubHomePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    club.name,
+                    widget.club.name,
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -91,7 +79,7 @@ class ClubHomePage extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -102,37 +90,39 @@ class ClubHomePage extends StatelessWidget {
                     title: 'Meeting Information',
                     icon: Icons.event,
                     children: [
-                      _buildInfoRow(Icons.schedule, 'Schedule', club.schedule),
-                      _buildInfoRow(Icons.access_time, 'Time', club.time),
-                      _buildInfoRow(Icons.room, 'Room', club.room),
+                      _buildInfoRow(Icons.schedule, 'Schedule', widget.club.schedule),
+                      _buildInfoRow(Icons.access_time, 'Time', widget.club.time),
+                      _buildInfoRow(Icons.room, 'Room', widget.club.room),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Leadership Card
                   _buildInfoCard(
                     context,
                     title: 'Leadership',
                     icon: Icons.people,
                     children: [
-                      _buildLeaderTile('Club Head', club.head1, club.emailHead1),
-                      if (club.head2 != null)
-                        _buildLeaderTile('Co-Head', club.head2, club.emailHead2),
+                      _buildLeaderTile(
+                          'Club Head', widget.club.head1, widget.club.emailHead1),
+                      if (widget.club.head2 != null)
+                        _buildLeaderTile(
+                            'Co-Head', widget.club.head2, widget.club.emailHead2),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Advisors Card
                   _buildInfoCard(
                     context,
                     title: 'Faculty Advisors',
                     icon: Icons.school,
                     children: [
-                      _buildAdvisorTile(club.advisor1),
-                      if (club.advisor2 != null)
-                        _buildAdvisorTile(club.advisor2),
+                      _buildAdvisorTile(widget.club.advisor1),
+                      if (widget.club.advisor2 != null)
+                        _buildAdvisorTile(widget.club.advisor2),
                     ],
                   ),
                 ],
@@ -140,6 +130,18 @@ class ClubHomePage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          if (_isFollowing) {
+            await UserService.unfollowClub(widget.club.name);
+          } else {
+            await UserService.followClub(widget.club.name);
+          }
+          await _checkFollowStatus();
+        },
+        backgroundColor: Colors.deepPurple,
+        child: Icon(_isFollowing ? Icons.favorite : Icons.favorite_border),
       ),
     );
   }
@@ -181,7 +183,7 @@ class ClubHomePage extends StatelessWidget {
 
   Widget _buildInfoRow(IconData icon, String label, String? value) {
     if (value == null) return const SizedBox.shrink();
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
@@ -217,7 +219,7 @@ class ClubHomePage extends StatelessWidget {
 
   Widget _buildLeaderTile(String role, String? name, String? email) {
     if (name == null) return const SizedBox.shrink();
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
@@ -225,7 +227,7 @@ class ClubHomePage extends StatelessWidget {
           CircleAvatar(
             backgroundColor: Colors.deepPurple.shade100,
             child: Text(
-              name[0].toUpperCase(),
+              name.isNotEmpty ? name[0].toUpperCase() : '?',
               style: const TextStyle(
                 color: Colors.deepPurple,
                 fontWeight: FontWeight.bold,
@@ -270,7 +272,7 @@ class ClubHomePage extends StatelessWidget {
 
   Widget _buildAdvisorTile(String? name) {
     if (name == null) return const SizedBox.shrink();
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(

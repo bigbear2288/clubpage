@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'discovery_page.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -20,13 +21,28 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // Create a GoogleAuthProvider
       final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+      final UserCredential userCredential =
+          await _auth.signInWithPopup(googleProvider);
 
-      // Sign in with popup using Firebase directly
-      await _auth.signInWithPopup(googleProvider);
+      // Save user data to database
+      if (userCredential.user != null) {
+        final user = userCredential.user!;
+        final DatabaseReference userRef =
+            FirebaseDatabase.instance.ref('users/${user.uid}');
 
-      // Navigation will happen automatically via the StreamBuilder in main.dart
+        // Check if user exists, if not create profile
+        final snapshot = await userRef.get();
+        if (!snapshot.exists) {
+          await userRef.set({
+            'email': user.email,
+            'displayName': user.displayName,
+            'photoURL': user.photoURL,
+            'createdAt': DateTime.now().toIso8601String(),
+            'followedClubs': [],
+          });
+        }
+      }
     } catch (e) {
       debugPrint('Error signing in with Google: $e');
       if (mounted) {

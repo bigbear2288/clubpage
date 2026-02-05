@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  firebase_database: ^11.1.4
   # Flutter packages
   table_calendar: ^3.0.9
   cupertino_icons: ^1.0.8
