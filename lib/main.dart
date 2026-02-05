@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
+=======
+>>>>>>> 2573024f833219232c979d1d04c42be698ae70d3
 import 'pages/discovery_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'pages/login_page.dart';
 
 void main() async {
