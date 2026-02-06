@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'discovery_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
