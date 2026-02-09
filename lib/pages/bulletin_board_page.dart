@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'add_announcement_page.dart';
+import '../models/club.dart'; // Add this import
 
 class BulletinBoardPage extends StatefulWidget {
-  const BulletinBoardPage({super.key});
+  final List<Club> clubs; // Changed to List<Club>
+
+  const BulletinBoardPage({
+    super.key,
+    required this.clubs,
+  });
 
   @override
   State<BulletinBoardPage> createState() => _BulletinBoardPageState();
@@ -23,7 +29,7 @@ class _BulletinBoardPageState extends State<BulletinBoardPage> {
   void fetchAnnouncements() async {
     dbRef.onValue.listen((event) {
       final data = event.snapshot.value;
-    if (data != null && data is Map<dynamic, dynamic>) {
+      if (data != null && data is Map<dynamic, dynamic>) {
         final Map<dynamic, dynamic> map = Map<dynamic, dynamic>.from(data);
         final List<Map<String, dynamic>> loaded = [];
 
@@ -33,8 +39,8 @@ class _BulletinBoardPageState extends State<BulletinBoardPage> {
         });
 
         // Sort by timestamp descending (newest first)
-        loaded.sort((a, b) => (b['timestamp'] as int)
-            .compareTo(a['timestamp'] as int));
+        loaded.sort(
+            (a, b) => (b['timestamp'] as int).compareTo(a['timestamp'] as int));
 
         setState(() {
           announcements = loaded;
@@ -51,7 +57,7 @@ class _BulletinBoardPageState extends State<BulletinBoardPage> {
 
   String formatTimestamp(int ts) {
     final date = DateTime.fromMillisecondsSinceEpoch(ts);
-    return "${date.month}/${date.day}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2,'0')}";
+    return "${date.month}/${date.day}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}";
   }
 
   @override
@@ -96,7 +102,7 @@ class _BulletinBoardPageState extends State<BulletinBoardPage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => const AddAnnouncementPage(),
+              builder: (_) => AddAnnouncementPage(clubs: widget.clubs),
             ),
           );
         },

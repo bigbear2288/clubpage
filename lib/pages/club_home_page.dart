@@ -1,24 +1,23 @@
-// new format from claude
-// hello claire
 import 'package:flutter/material.dart';
 import '../models/club.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../services/user_service.dart';
 
 class ClubHomePage extends StatelessWidget {
   final Club club;
 
   const ClubHomePage({super.key, required this.club});
 
-  
+  // Define the maroon color
+  static const Color maroonColor = Color.fromARGB(255, 122, 30, 30);
 
   @override
   Widget build(BuildContext context) {
+    print('DEBUG - Club name: "${club.name}"'); // Add this line
+    print('DEBUG - Club name length: ${club.name.length}'); // Add this line
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text(club.name),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: maroonColor,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -30,7 +29,7 @@ class ClubHomePage extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.deepPurple, Colors.deepPurple.shade300],
+                  colors: [maroonColor, maroonColor.withOpacity(0.7)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -46,7 +45,7 @@ class ClubHomePage extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple,
+                        color: maroonColor,
                       ),
                     ),
                   ),
@@ -134,7 +133,7 @@ class ClubHomePage extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, color: Colors.deepPurple, size: 24),
+                Icon(icon, color: maroonColor, size: 24),
                 const SizedBox(width: 8),
                 Text(
                   title,
@@ -197,11 +196,11 @@ class ClubHomePage extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: Colors.deepPurple.shade100,
+            backgroundColor: maroonColor.withOpacity(0.1),
             child: Text(
               name.isNotEmpty ? name[0].toUpperCase() : '?',
               style: const TextStyle(
-                color: Colors.deepPurple,
+                color: maroonColor,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -229,9 +228,9 @@ class ClubHomePage extends StatelessWidget {
                 if (email != null && email.isNotEmpty)
                   Text(
                     email,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
-                      color: Colors.deepPurple[300],
+                      color: maroonColor,
                     ),
                   ),
               ],

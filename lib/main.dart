@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'pages/discovery_page.dart';
 import 'pages/login_page.dart';
+import 'pages/main_navigation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,19 +30,16 @@ class MyApp extends StatelessWidget {
           print('DEBUG - Has data: ${snapshot.hasData}');
           print('DEBUG - User: ${snapshot.data}');
 
-          // Show loading while checking auth state
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           }
 
-          // If user is logged in, show DiscoveryPage
           if (snapshot.hasData) {
-            return const DiscoveryPage();
+            return MainNavigation();
           }
 
-          // Otherwise show LoginPage
           return const LoginPage();
         },
       ),

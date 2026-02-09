@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import '../models/club.dart'; // Add this import
 
 class AddAnnouncementPage extends StatefulWidget {
-  const AddAnnouncementPage({super.key});
+  final List<Club> clubs; // Add this field
+
+  const AddAnnouncementPage({
+    super.key,
+    required this.clubs, // Add this parameter
+  });
 
   @override
   State<AddAnnouncementPage> createState() => _AddAnnouncementPageState();
@@ -12,9 +18,10 @@ class _AddAnnouncementPageState extends State<AddAnnouncementPage> {
   final _clubController = TextEditingController();
   final _messageController = TextEditingController();
   final dbRef = FirebaseDatabase.instance.ref('announcements');
+  Club? _selectedClub; // Add this to track selected club
 
   void _submit() async {
-    final clubName = _clubController.text.trim();
+    final clubName = _selectedClub?.name ?? _clubController.text.trim();
     final message = _messageController.text.trim();
 
     if (clubName.isEmpty || message.isEmpty) return;
@@ -41,13 +48,24 @@ class _AddAnnouncementPageState extends State<AddAnnouncementPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Club name input
-            TextField(
-              controller: _clubController,
+            // Club dropdown (using the clubs list)
+            DropdownButtonFormField<Club>(
+              value: _selectedClub,
               decoration: const InputDecoration(
                 labelText: 'Club Name',
                 border: OutlineInputBorder(),
               ),
+              items: widget.clubs.map((club) {
+                return DropdownMenuItem<Club>(
+                  value: club,
+                  child: Text(club.name),
+                );
+              }).toList(),
+              onChanged: (Club? newValue) {
+                setState(() {
+                  _selectedClub = newValue;
+                });
+              },
             ),
             const SizedBox(height: 16),
 
