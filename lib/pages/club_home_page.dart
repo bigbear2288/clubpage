@@ -1,37 +1,3 @@
-// import 'package:flutter/material.dart';
-// import '../models/club.dart';
-
-// class ClubHomePage extends StatelessWidget {
-//   final Club club;
-
-//   const ClubHomePage({super.key, required this.club});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(title: Text(club.name)),
-//       body: Padding(
-//         padding: const EdgeInsets.all(16.0),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Text('Advisor 1: ${club.advisor1 ?? "N/A"}'),
-//             Text('Advisor 2: ${club.advisor2 ?? "N/A"}'),
-//             Text('Head 1: ${club.head1 ?? "N/A"}'),
-//             Text('Head 2: ${club.head2 ?? "N/A"}'),
-//             Text('Email Head 1: ${club.emailHead1 ?? "N/A"}'),
-//             Text('Email Head 2: ${club.emailHead2 ?? "N/A"}'),
-//             Text('Room: ${club.room ?? "N/A"}'),
-//             Text('Schedule: ${club.schedule ?? "N/A"}'),
-//             Text('Time: ${club.time ?? "N/A"}'),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
-// new format from claude
-// hello claire
 import 'package:flutter/material.dart';
 import '../models/club.dart';
 
@@ -40,13 +6,18 @@ class ClubHomePage extends StatelessWidget {
 
   const ClubHomePage({super.key, required this.club});
 
+  // Define the maroon color
+  static const Color maroonColor = Color.fromARGB(255, 122, 30, 30);
+
   @override
   Widget build(BuildContext context) {
+    print('DEBUG - Club name: "${club.name}"'); // Add this line
+    print('DEBUG - Club name length: ${club.name.length}'); // Add this line
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text(club.name),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: maroonColor,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -58,7 +29,7 @@ class ClubHomePage extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.deepPurple, Colors.deepPurple.shade300],
+                  colors: [maroonColor, maroonColor.withOpacity(0.7)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -70,17 +41,17 @@ class ClubHomePage extends StatelessWidget {
                     radius: 40,
                     backgroundColor: Colors.white,
                     child: Text(
-                      club.name[0].toUpperCase(),
+                      club.name.isNotEmpty ? club.name[0].toUpperCase() : "?",
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple,
+                        color: maroonColor,
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    club.name,
+                    club.name.isNotEmpty ? club.name : "Unknown Club",
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -91,7 +62,7 @@ class ClubHomePage extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -107,23 +78,25 @@ class ClubHomePage extends StatelessWidget {
                       _buildInfoRow(Icons.room, 'Room', club.room),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Leadership Card
                   _buildInfoCard(
                     context,
                     title: 'Leadership',
                     icon: Icons.people,
                     children: [
-                      _buildLeaderTile('Club Head', club.head1, club.emailHead1),
-                      if (club.head2 != null)
-                        _buildLeaderTile('Co-Head', club.head2, club.emailHead2),
+                      _buildLeaderTile(
+                          'Club Head', club.head1, club.emailHead1),
+                      if (club.head2 != null && club.head2!.isNotEmpty)
+                        _buildLeaderTile(
+                            'Co-Head', club.head2, club.emailHead2),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Advisors Card
                   _buildInfoCard(
                     context,
@@ -131,7 +104,7 @@ class ClubHomePage extends StatelessWidget {
                     icon: Icons.school,
                     children: [
                       _buildAdvisorTile(club.advisor1),
-                      if (club.advisor2 != null)
+                      if (club.advisor2 != null && club.advisor2!.isNotEmpty)
                         _buildAdvisorTile(club.advisor2),
                     ],
                   ),
@@ -160,7 +133,7 @@ class ClubHomePage extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, color: Colors.deepPurple, size: 24),
+                Icon(icon, color: maroonColor, size: 24),
                 const SizedBox(width: 8),
                 Text(
                   title,
@@ -180,8 +153,8 @@ class ClubHomePage extends StatelessWidget {
   }
 
   Widget _buildInfoRow(IconData icon, String label, String? value) {
-    if (value == null) return const SizedBox.shrink();
-    
+    if (value == null || value.isEmpty) return const SizedBox.shrink();
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
@@ -216,18 +189,18 @@ class ClubHomePage extends StatelessWidget {
   }
 
   Widget _buildLeaderTile(String role, String? name, String? email) {
-    if (name == null) return const SizedBox.shrink();
-    
+    if (name == null || name.isEmpty) return const SizedBox.shrink();
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: Colors.deepPurple.shade100,
+            backgroundColor: maroonColor.withOpacity(0.1),
             child: Text(
-              name[0].toUpperCase(),
+              name.isNotEmpty ? name[0].toUpperCase() : '?',
               style: const TextStyle(
-                color: Colors.deepPurple,
+                color: maroonColor,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -252,12 +225,12 @@ class ClubHomePage extends StatelessWidget {
                     color: Colors.grey[600],
                   ),
                 ),
-                if (email != null)
+                if (email != null && email.isNotEmpty)
                   Text(
                     email,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
-                      color: Colors.deepPurple[300],
+                      color: maroonColor,
                     ),
                   ),
               ],
@@ -269,8 +242,8 @@ class ClubHomePage extends StatelessWidget {
   }
 
   Widget _buildAdvisorTile(String? name) {
-    if (name == null) return const SizedBox.shrink();
-    
+    if (name == null || name.isEmpty) return const SizedBox.shrink();
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
