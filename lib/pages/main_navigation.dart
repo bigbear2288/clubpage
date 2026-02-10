@@ -4,6 +4,7 @@ import '../models/club.dart';
 import 'discovery_page.dart';
 import 'calendar_page.dart';
 import 'bulletin_board_page.dart';
+import 'following_page.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -125,16 +126,5 @@ class _MainNavigationState extends State<MainNavigation> {
         ],
       ),
     );
-  }
-}
-
-// Following Page - shows only followed clubs
-class FollowingPage extends StatelessWidget {
-  const FollowingPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // This will be the same as DiscoveryPage but with filter always set to Following
-    return const DiscoveryPage();
   }
 }
