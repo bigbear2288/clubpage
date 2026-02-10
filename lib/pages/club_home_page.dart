@@ -2,8 +2,6 @@
 // hello claire
 import 'package:flutter/material.dart';
 import '../models/club.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../services/user_service.dart';
 
 class ClubHomePage extends StatelessWidget {
   final Club club;
