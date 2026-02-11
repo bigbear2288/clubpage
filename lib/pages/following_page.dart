@@ -4,21 +4,18 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/club.dart';
 import '../services/user_service.dart';
 import 'club_home_page.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:google_sign_in/google_sign_in.dart';
 
-class DiscoveryPage extends StatefulWidget {
-  const DiscoveryPage({super.key});
+class FollowingPage extends StatefulWidget {
+  const FollowingPage({super.key});
 
   @override
-  State<DiscoveryPage> createState() => _DiscoveryPageState();
+  State<FollowingPage> createState() => _FollowingPageState();
 }
 
-class _DiscoveryPageState extends State<DiscoveryPage> {
+class _FollowingPageState extends State<FollowingPage> {
   final dbRef = FirebaseDatabase.instance.ref();
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  List<Club> clubs = [];
+  List<Club> followedClubs = [];
   Set<String> followedClubIds = {};
   bool isLoading = true;
   String searchQuery = '';
@@ -26,85 +23,62 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
   @override
   void initState() {
     super.initState();
-    fetchClubs();
     loadFollowedClubs();
-  }
-
-  Future<void> _signOut() async {
-    try {
-      await FirebaseAuth.instance.signOut();
-      if (!kIsWeb) {
-        await _googleSignIn.signOut();
-      }
-      // Navigation will happen automatically via the StreamBuilder in main.dart
-    } catch (e) {
-      debugPrint('Error signing out: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to sign out: ${e.toString()}')),
-        );
-      }
-    }
   }
 
   Future<void> loadFollowedClubs() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      setState(() {
+        isLoading = false;
+      });
+      return;
+    }
 
     try {
+      // Get the list of followed club IDs
       final userSnapshot = await FirebaseDatabase.instance
           .ref('users/${user.uid}/followedClubs')
           .get();
 
       if (userSnapshot.exists && userSnapshot.value != null) {
         final List<dynamic> followed = userSnapshot.value as List<dynamic>;
+        followedClubIds =
+            followed.where((id) => id != null).cast<String>().toSet();
+
+        // Now fetch the actual club data
+        await fetchFollowedClubsData();
+      } else {
         setState(() {
-          followedClubIds =
-              followed.where((id) => id != null).cast<String>().toSet();
+          followedClubs = [];
+          isLoading = false;
         });
       }
     } catch (e) {
       debugPrint('Error loading followed clubs: $e');
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
-  Future<void> toggleFollow(String clubName) async {
-    final isFollowing = followedClubIds.contains(clubName);
-
-    try {
-      if (isFollowing) {
-        await UserService.unfollowClub(clubName);
-        setState(() => followedClubIds.remove(clubName));
-      } else {
-        await UserService.followClub(clubName);
-        setState(() => followedClubIds.add(clubName));
-      }
-    } catch (e) {
-      debugPrint('Error toggling follow: $e');
+  Future<void> fetchFollowedClubsData() async {
+    if (followedClubIds.isEmpty) {
+      setState(() {
+        followedClubs = [];
+        isLoading = false;
+      });
+      return;
     }
-  }
 
-  void fetchClubs() async {
     try {
       final snapshot = await dbRef.get();
-      debugPrint('=== FETCH CLUBS DEBUG ===');
-      debugPrint('Snapshot exists: ${snapshot.exists}');
 
       if (snapshot.exists) {
         final data = snapshot.value;
-        debugPrint('Data type: ${data.runtimeType}');
-        debugPrint('Data is List: ${data is List}');
-        debugPrint('Data is Map: ${data is Map}');
-
-        if (data is Map) {
-          debugPrint('Map keys: ${data.keys.toList()}');
-        }
-
         final List<Club> loaded = [];
 
         if (data is List) {
-          debugPrint('Data is a List with ${data.length} items');
-
           for (var i = 0; i < data.length; i++) {
             var item = data[i];
             if (item != null) {
@@ -112,11 +86,11 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                 final Map<String, dynamic> clubMap =
                     Map<String, dynamic>.from(item);
                 final name = clubMap['CLUB:'] ?? '';
-                debugPrint('Item $i name: "$name"');
 
-                if (name.toString().isNotEmpty) {
+                // Only add if this club is in the followed list
+                if (name.toString().isNotEmpty &&
+                    followedClubIds.contains(name)) {
                   loaded.add(Club.fromMap(clubMap));
-                  debugPrint('✓ Added club: $name');
                 }
               } catch (e) {
                 debugPrint('Error processing item $i: $e');
@@ -124,19 +98,17 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
             }
           }
         } else if (data is Map) {
-          debugPrint('Data is a Map with ${data.length} entries');
           data.forEach((key, value) {
-            debugPrint('Processing key: $key');
             if (value != null && value is Map) {
               try {
                 final Map<String, dynamic> clubMap =
                     Map<String, dynamic>.from(value);
                 final name = clubMap['CLUB:'] ?? '';
-                debugPrint('Club $key name: "$name"');
 
-                if (name.toString().isNotEmpty) {
+                // Only add if this club is in the followed list
+                if (name.toString().isNotEmpty &&
+                    followedClubIds.contains(name)) {
                   loaded.add(Club.fromMap(clubMap));
-                  debugPrint('✓ Added club: $name');
                 }
               } catch (e) {
                 debugPrint('Error processing $key: $e');
@@ -146,29 +118,51 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
         }
 
         setState(() {
-          clubs = loaded;
+          followedClubs = loaded;
           isLoading = false;
         });
 
-        debugPrint('=== FINAL: Successfully loaded ${loaded.length} clubs ===');
+        debugPrint(
+            'Successfully loaded ${loaded.length} followed clubs out of ${followedClubIds.length} followed IDs');
       } else {
-        debugPrint('Snapshot does not exist!');
         setState(() {
+          followedClubs = [];
           isLoading = false;
-          clubs = [];
         });
       }
     } catch (e) {
-      debugPrint('Error: $e');
+      debugPrint('Error fetching followed clubs data: $e');
       setState(() {
         isLoading = false;
-        clubs = [];
       });
     }
   }
 
+  Future<void> unfollowClub(String clubName) async {
+    try {
+      await UserService.unfollowClub(clubName);
+      setState(() {
+        followedClubIds.remove(clubName);
+        followedClubs.removeWhere((club) => club.name == clubName);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unfollowed $clubName')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error unfollowing club: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to unfollow club')),
+        );
+      }
+    }
+  }
+
   List<Club> get filteredClubs {
-    List<Club> filtered = clubs;
+    List<Club> filtered = followedClubs;
 
     // Apply search filter
     if (searchQuery.isNotEmpty) {
@@ -193,129 +187,116 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
       );
     }
 
-    if (clubs.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Discover Clubs'),
-          backgroundColor: const Color(0xFF7A1E1E),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Log out',
-              onPressed: _signOut,
-            ),
-          ],
-        ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.groups_outlined, size: 64, color: Colors.grey),
-              SizedBox(height: 16),
-              Text('No clubs found',
-                  style: TextStyle(fontSize: 18, color: Colors.grey)),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Discover Clubs'),
+        title: const Text('Following'),
         backgroundColor: const Color(0xFF7A1E1E),
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Log out',
-            onPressed: _signOut,
-          ),
-        ],
       ),
-      body: Column(
-        children: [
-          Container(
-            color: const Color(0xFF7A1E1E),
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: TextField(
-              onChanged: (value) => setState(() => searchQuery = value),
-              decoration: InputDecoration(
-                hintText: 'Search clubs...',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Text(
-                  '${filteredClubs.length} clubs',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
+      body: followedClubs.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.favorite_border,
+                      size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No clubs followed yet',
+                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                   ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Explore clubs and follow your favorites',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : Column(
+              children: [
+                if (followedClubs.length > 3)
+                  Container(
+                    color: const Color(0xFF7A1E1E),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: TextField(
+                      onChanged: (value) => setState(() => searchQuery = value),
+                      decoration: InputDecoration(
+                        hintText: 'Search your clubs...',
+                        prefixIcon: const Icon(Icons.search),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Text(
+                        '${filteredClubs.length} ${filteredClubs.length == 1 ? 'club' : 'clubs'}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: filteredClubs.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.search_off,
+                                  size: 64, color: Colors.grey[400]),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No clubs found',
+                                style: TextStyle(
+                                    fontSize: 18, color: Colors.grey[600]),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  'Try a different search term',
+                                  style: TextStyle(
+                                      fontSize: 14, color: Colors.grey[500]),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : GridView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.75,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          itemCount: filteredClubs.length,
+                          itemBuilder: (context, index) {
+                            final club = filteredClubs[index];
+                            return _buildClubCard(club);
+                          },
+                        ),
                 ),
               ],
             ),
-          ),
-          Expanded(
-            child: filteredClubs.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.search_off,
-                            size: 64, color: Colors.grey[400]),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No clubs found',
-                          style:
-                              TextStyle(fontSize: 18, color: Colors.grey[600]),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            'Try a different search term',
-                            style: TextStyle(
-                                fontSize: 14, color: Colors.grey[500]),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : GridView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.75,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
-                    itemCount: filteredClubs.length,
-                    itemBuilder: (context, index) {
-                      final club = filteredClubs[index];
-                      return _buildClubCard(club);
-                    },
-                  ),
-          ),
-        ],
-      ),
     );
   }
 
   Widget _buildClubCard(Club club) {
-    final isFollowing = followedClubIds.contains(club.name);
-
     return GestureDetector(
       onTap: () async {
         await Navigator.push(
@@ -324,6 +305,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
             builder: (context) => ClubHomePage(club: club),
           ),
         );
+        // Refresh the followed clubs list when returning
         loadFollowedClubs();
       },
       child: Card(
@@ -362,7 +344,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                   top: 8,
                   right: 8,
                   child: GestureDetector(
-                    onTap: () => toggleFollow(club.name),
+                    onTap: () => unfollowClub(club.name),
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
@@ -375,9 +357,9 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                           ),
                         ],
                       ),
-                      child: Icon(
-                        isFollowing ? Icons.favorite : Icons.favorite_border,
-                        color: isFollowing ? Colors.red : Colors.grey[600],
+                      child: const Icon(
+                        Icons.favorite,
+                        color: Colors.red,
                         size: 20,
                       ),
                     ),

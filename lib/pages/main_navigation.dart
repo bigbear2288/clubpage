@@ -4,6 +4,7 @@ import '../models/club.dart';
 import 'discovery_page.dart';
 import 'calendar_page.dart';
 import 'bulletin_board_page.dart';
+import 'following_page.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -128,13 +129,50 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 }
 
-// Following Page - shows only followed clubs
-class FollowingPage extends StatelessWidget {
-  const FollowingPage({super.key});
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int _currentIndex = 0;
+
+  final List<Widget> _pages = [
+    const DiscoveryPage(),
+    const FollowingPage(),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    // This will be the same as DiscoveryPage but with filter always set to Following
-    return const DiscoveryPage();
+    return Scaffold(
+      body: _pages[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        selectedItemColor: const Color(0xFF7A1E1E),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.explore),
+            label: 'Discover',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite),
+            label: 'Following',
+          ),
+        ],
+      ),
+    );
   }
+}
+
+@override
+Widget build(BuildContext context) {
+  // This will be the same as DiscoveryPage but with filter always set to Following
+  return const DiscoveryPage();
 }

@@ -91,7 +91,7 @@ class ClubHomePage extends StatelessWidget {
                           'Club Head', club.head1, club.emailHead1),
                       if (club.head2 != null && club.head2!.isNotEmpty)
                         _buildLeaderTile(
-                            'Co-Head', club.head2, club.emailHead2),
+                            'Club Head', club.head2, club.emailHead2),
                     ],
                   ),
 
