@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'discovery_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -10,6 +13,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   bool _isLoading = false;
 
@@ -19,11 +23,55 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // Create a GoogleAuthProvider
-      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+      UserCredential userCredential;
 
-      // Sign in with popup using Firebase directly
-      await _auth.signInWithPopup(googleProvider);
+      if (kIsWeb) {
+        // Web implementation
+        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        userCredential = await _auth.signInWithPopup(googleProvider);
+      } else {
+        // Mobile/Desktop implementation
+        final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+        if (googleUser == null) {
+          // User canceled the sign-in
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
+
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
+
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        userCredential = await _auth.signInWithCredential(credential);
+      }
+
+      // Check if email ends with hopkins.edu
+      final String? email = userCredential.user?.email;
+
+      if (email == null || !email.endsWith('hopkins.edu')) {
+        // Sign out the user immediately
+        await _auth.signOut();
+        if (!kIsWeb) {
+          await _googleSignIn.signOut();
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Access restricted to Hopkins School users only'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
 
       // Navigation will happen automatically via the StreamBuilder in main.dart
     } catch (e) {
@@ -77,6 +125,7 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
+            const SizedBox(height: 16),
           ],
         ),
       ),

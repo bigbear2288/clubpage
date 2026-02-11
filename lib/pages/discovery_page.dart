@@ -325,7 +325,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                         child: Text(
                           club.name,
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -348,6 +348,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                     padding: const EdgeInsets.all(12),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (club.advisor1?.isNotEmpty ?? false) ...[
                           const Text(
@@ -369,7 +370,6 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
                           ),
                         ],
                         if (club.advisor2?.isNotEmpty ?? false) ...[
@@ -382,7 +382,6 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
                           ),
                         ],
                       ],
