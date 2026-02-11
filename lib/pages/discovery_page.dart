@@ -4,8 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/club.dart';
 import '../services/user_service.dart';
 import 'club_home_page.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:google_sign_in/google_sign_in.dart';
 
 class DiscoveryPage extends StatefulWidget {
   const DiscoveryPage({super.key});
@@ -16,7 +14,6 @@ class DiscoveryPage extends StatefulWidget {
 
 class _DiscoveryPageState extends State<DiscoveryPage> {
   final dbRef = FirebaseDatabase.instance.ref();
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   List<Club> clubs = [];
   Set<String> followedClubIds = {};
@@ -28,23 +25,6 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
     super.initState();
     fetchClubs();
     loadFollowedClubs();
-  }
-
-  Future<void> _signOut() async {
-    try {
-      await FirebaseAuth.instance.signOut();
-      if (!kIsWeb) {
-        await _googleSignIn.signOut();
-      }
-      // Navigation will happen automatically via the StreamBuilder in main.dart
-    } catch (e) {
-      debugPrint('Error signing out: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to sign out: ${e.toString()}')),
-        );
-      }
-    }
   }
 
   Future<void> loadFollowedClubs() async {
@@ -196,15 +176,12 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
     if (clubs.isEmpty) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Discover Clubs'),
+          title: const Text(
+            'Discover Clubs',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: const Color(0xFF7A1E1E),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Log out',
-              onPressed: _signOut,
-            ),
-          ],
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
         body: const Center(
           child: Column(
@@ -222,16 +199,13 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Discover Clubs'),
+        title: const Text(
+          'Discover Clubs',
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: const Color(0xFF7A1E1E),
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Log out',
-            onPressed: _signOut,
-          ),
-        ],
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
         children: [
@@ -296,8 +270,8 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.75,
+                      crossAxisCount: 4, // 4 per row
+                      childAspectRatio: 1, // Square
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                     ),
@@ -329,111 +303,116 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
       child: Card(
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
           children: [
-            Stack(
+            // Main card content
+            Column(
               children: [
-                Container(
-                  height: 100,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF7A1E1E),
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(16)),
-                  ),
-                  child: Center(
-                    child: CircleAvatar(
-                      radius: 30,
-                      backgroundColor: Colors.white,
-                      child: Text(
-                        club.name.isNotEmpty ? club.name[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF7A1E1E),
+                // Maroon header section (1/4 of card)
+                Expanded(
+                  flex: 1,
+                  child: Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF7A1E1E),
+                    ),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          club.name,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ),
                   ),
                 ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: GestureDetector(
-                    onTap: () => toggleFollow(club.name),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
+                // White background section (3/4 of card)
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (club.advisor1?.isNotEmpty ?? false) ...[
+                          const Text(
+                            'Advisor',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            club.advisor1!,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF424242),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
-                      ),
-                      child: Icon(
-                        isFollowing ? Icons.favorite : Icons.favorite_border,
-                        color: isFollowing ? Colors.red : Colors.grey[600],
-                        size: 20,
-                      ),
+                        if (club.advisor2?.isNotEmpty ?? false) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            club.advisor2!,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey[700],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
               ],
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      club.name,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+            // Heart icon
+            Positioned(
+              top: 6,
+              right: 6,
+              child: GestureDetector(
+                onTap: () => toggleFollow(club.name),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    if (club.advisor1 != null && club.advisor1!.isNotEmpty)
-                      Text(
-                        club.advisor1!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    if (club.schedule != null && club.schedule!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Row(
-                          children: [
-                            Icon(Icons.schedule,
-                                size: 12, color: Colors.grey[600]),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                club.schedule!,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
+                    ],
+                  ),
+                  child: Icon(
+                    isFollowing ? Icons.favorite : Icons.favorite_border,
+                    color: isFollowing ? Colors.red : Colors.grey[600],
+                    size: 16,
+                  ),
                 ),
               ),
             ),

@@ -15,7 +15,7 @@ class FollowingPage extends StatefulWidget {
 class _FollowingPageState extends State<FollowingPage> {
   final dbRef = FirebaseDatabase.instance.ref();
 
-  List<Club> followedClubs = [];
+  List<Club> allClubs = [];
   Set<String> followedClubIds = {};
   bool isLoading = true;
   String searchQuery = '';
@@ -23,54 +23,48 @@ class _FollowingPageState extends State<FollowingPage> {
   @override
   void initState() {
     super.initState();
+    fetchClubs();
     loadFollowedClubs();
   }
 
   Future<void> loadFollowedClubs() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      setState(() {
-        isLoading = false;
-      });
-      return;
-    }
+    if (user == null) return;
 
     try {
-      // Get the list of followed club IDs
       final userSnapshot = await FirebaseDatabase.instance
           .ref('users/${user.uid}/followedClubs')
           .get();
 
       if (userSnapshot.exists && userSnapshot.value != null) {
         final List<dynamic> followed = userSnapshot.value as List<dynamic>;
-        followedClubIds =
-            followed.where((id) => id != null).cast<String>().toSet();
-
-        // Now fetch the actual club data
-        await fetchFollowedClubsData();
-      } else {
         setState(() {
-          followedClubs = [];
-          isLoading = false;
+          followedClubIds =
+              followed.where((id) => id != null).cast<String>().toSet();
         });
       }
     } catch (e) {
       debugPrint('Error loading followed clubs: $e');
-      setState(() {
-        isLoading = false;
-      });
     }
   }
 
-  Future<void> fetchFollowedClubsData() async {
-    if (followedClubIds.isEmpty) {
-      setState(() {
-        followedClubs = [];
-        isLoading = false;
-      });
-      return;
-    }
+  Future<void> toggleFollow(String clubName) async {
+    final isFollowing = followedClubIds.contains(clubName);
 
+    try {
+      if (isFollowing) {
+        await UserService.unfollowClub(clubName);
+        setState(() => followedClubIds.remove(clubName));
+      } else {
+        await UserService.followClub(clubName);
+        setState(() => followedClubIds.add(clubName));
+      }
+    } catch (e) {
+      debugPrint('Error toggling follow: $e');
+    }
+  }
+
+  void fetchClubs() async {
     try {
       final snapshot = await dbRef.get();
 
@@ -87,9 +81,7 @@ class _FollowingPageState extends State<FollowingPage> {
                     Map<String, dynamic>.from(item);
                 final name = clubMap['CLUB:'] ?? '';
 
-                // Only add if this club is in the followed list
-                if (name.toString().isNotEmpty &&
-                    followedClubIds.contains(name)) {
+                if (name.toString().isNotEmpty) {
                   loaded.add(Club.fromMap(clubMap));
                 }
               } catch (e) {
@@ -105,9 +97,7 @@ class _FollowingPageState extends State<FollowingPage> {
                     Map<String, dynamic>.from(value);
                 final name = clubMap['CLUB:'] ?? '';
 
-                // Only add if this club is in the followed list
-                if (name.toString().isNotEmpty &&
-                    followedClubIds.contains(name)) {
+                if (name.toString().isNotEmpty) {
                   loaded.add(Club.fromMap(clubMap));
                 }
               } catch (e) {
@@ -118,51 +108,29 @@ class _FollowingPageState extends State<FollowingPage> {
         }
 
         setState(() {
-          followedClubs = loaded;
+          allClubs = loaded;
           isLoading = false;
         });
-
-        debugPrint(
-            'Successfully loaded ${loaded.length} followed clubs out of ${followedClubIds.length} followed IDs');
       } else {
         setState(() {
-          followedClubs = [];
           isLoading = false;
+          allClubs = [];
         });
       }
     } catch (e) {
-      debugPrint('Error fetching followed clubs data: $e');
+      debugPrint('Error: $e');
       setState(() {
         isLoading = false;
+        allClubs = [];
       });
-    }
-  }
-
-  Future<void> unfollowClub(String clubName) async {
-    try {
-      await UserService.unfollowClub(clubName);
-      setState(() {
-        followedClubIds.remove(clubName);
-        followedClubs.removeWhere((club) => club.name == clubName);
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unfollowed $clubName')),
-        );
-      }
-    } catch (e) {
-      debugPrint('Error unfollowing club: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to unfollow club')),
-        );
-      }
     }
   }
 
   List<Club> get filteredClubs {
-    List<Club> filtered = followedClubs;
+    // Only show clubs that are in the followed list
+    List<Club> filtered = allClubs
+        .where((club) => followedClubIds.contains(club.name))
+        .toList();
 
     // Apply search filter
     if (searchQuery.isNotEmpty) {
@@ -189,114 +157,123 @@ class _FollowingPageState extends State<FollowingPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Following'),
+        title: const Text(
+          'Following',
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: const Color(0xFF7A1E1E),
         elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: followedClubs.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.favorite_border,
-                      size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No clubs followed yet',
-                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+      body: Column(
+        children: [
+          if (followedClubIds.isNotEmpty)
+            Container(
+              color: const Color(0xFF7A1E1E),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: TextField(
+                onChanged: (value) => setState(() => searchQuery = value),
+                decoration: InputDecoration(
+                  hintText: 'Search your clubs...',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Explore clubs and follow your favorites',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                ),
+              ),
+            ),
+          if (followedClubIds.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Text(
+                    '${filteredClubs.length} clubs',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
               ),
-            )
-          : Column(
-              children: [
-                if (followedClubs.length > 3)
-                  Container(
-                    color: const Color(0xFF7A1E1E),
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: TextField(
-                      onChanged: (value) => setState(() => searchQuery = value),
-                      decoration: InputDecoration(
-                        hintText: 'Search your clubs...',
-                        prefixIcon: const Icon(Icons.search),
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Text(
-                        '${filteredClubs.length} ${filteredClubs.length == 1 ? 'club' : 'clubs'}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: filteredClubs.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.search_off,
-                                  size: 64, color: Colors.grey[400]),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No clubs found',
-                                style: TextStyle(
-                                    fontSize: 18, color: Colors.grey[600]),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Text(
-                                  'Try a different search term',
-                                  style: TextStyle(
-                                      fontSize: 14, color: Colors.grey[500]),
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : GridView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.75,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                          ),
-                          itemCount: filteredClubs.length,
-                          itemBuilder: (context, index) {
-                            final club = filteredClubs[index];
-                            return _buildClubCard(club);
-                          },
-                        ),
-                ),
-              ],
             ),
+          Expanded(
+            child: followedClubIds.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.favorite_border,
+                            size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No favorited clubs yet',
+                          style:
+                              TextStyle(fontSize: 18, color: Colors.grey[600]),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Go to Discovery to find clubs to follow',
+                            style: TextStyle(
+                                fontSize: 14, color: Colors.grey[500]),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : filteredClubs.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.search_off,
+                                size: 64, color: Colors.grey[400]),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No clubs found',
+                              style: TextStyle(
+                                  fontSize: 18, color: Colors.grey[600]),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                'Try a different search term',
+                                style: TextStyle(
+                                    fontSize: 14, color: Colors.grey[500]),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : GridView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4,
+                          childAspectRatio: 1,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                        itemCount: filteredClubs.length,
+                        itemBuilder: (context, index) {
+                          final club = filteredClubs[index];
+                          return _buildClubCard(club);
+                        },
+                      ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildClubCard(Club club) {
+    final isFollowing = followedClubIds.contains(club.name);
+
     return GestureDetector(
       onTap: () async {
         await Navigator.push(
@@ -305,117 +282,121 @@ class _FollowingPageState extends State<FollowingPage> {
             builder: (context) => ClubHomePage(club: club),
           ),
         );
-        // Refresh the followed clubs list when returning
         loadFollowedClubs();
       },
       child: Card(
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
           children: [
-            Stack(
+            // Main card content
+            Column(
               children: [
-                Container(
-                  height: 100,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF7A1E1E),
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(16)),
-                  ),
-                  child: Center(
-                    child: CircleAvatar(
-                      radius: 30,
-                      backgroundColor: Colors.white,
-                      child: Text(
-                        club.name.isNotEmpty ? club.name[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF7A1E1E),
+                // Maroon header section (1/4 of card)
+                Expanded(
+                  flex: 1,
+                  child: Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF7A1E1E),
+                    ),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          club.name,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ),
                   ),
                 ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: GestureDetector(
-                    onTap: () => unfollowClub(club.name),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
+                // White background section (3/4 of card)
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (club.advisor1?.isNotEmpty ?? false) ...[
+                          const Text(
+                            'Advisor',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            club.advisor1!,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF424242),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
-                      ),
-                      child: const Icon(
-                        Icons.favorite,
-                        color: Colors.red,
-                        size: 20,
-                      ),
+                        if (club.advisor2?.isNotEmpty ?? false) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            club.advisor2!,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey[700],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
               ],
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      club.name,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+            // Heart icon
+            Positioned(
+              top: 6,
+              right: 6,
+              child: GestureDetector(
+                onTap: () => toggleFollow(club.name),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    if (club.advisor1 != null && club.advisor1!.isNotEmpty)
-                      Text(
-                        club.advisor1!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    if (club.schedule != null && club.schedule!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Row(
-                          children: [
-                            Icon(Icons.schedule,
-                                size: 12, color: Colors.grey[600]),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                club.schedule!,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
+                    ],
+                  ),
+                  child: Icon(
+                    isFollowing ? Icons.favorite : Icons.favorite_border,
+                    color: isFollowing ? Colors.red : Colors.grey[600],
+                    size: 16,
+                  ),
                 ),
               ),
             ),
