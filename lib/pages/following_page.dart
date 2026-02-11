@@ -368,6 +368,41 @@ class _FollowingPageState extends State<FollowingPage> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
+                        if (club.head1?.isNotEmpty ?? false) ...[
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Club Head',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            club.head1!,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF424242),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        if (club.head2?.isNotEmpty ?? false) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            club.head2!,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey[700],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ],
                     ),
                   ),
