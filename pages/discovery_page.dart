@@ -192,7 +192,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: selectedClub,
+                  initialValue: selectedClub,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     hintText: 'Choose a club',
