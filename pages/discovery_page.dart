@@ -346,7 +346,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
     if (isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
-      );
+     );
     }
 
     if (clubs.isEmpty) {
