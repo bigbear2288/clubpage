@@ -341,6 +341,121 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
     }
   }
 
+  void _showAddAnnouncementDialog() {
+    String? selectedClub;
+    final TextEditingController messageController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add Announcement'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Select Club',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: selectedClub,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: 'Choose a club',
+                  ),
+                  items: clubs.map((club) {
+                    return DropdownMenuItem(
+                      value: club.name,
+                      child: Text(
+                        club.name,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedClub = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Announcement Message',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: messageController,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: 'Enter your announcement',
+                  ),
+                  maxLines: 4,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (selectedClub != null && messageController.text.isNotEmpty) {
+                  await _addAnnouncement(selectedClub!, messageController.text);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Announcement added successfully!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please select a club and enter a message'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF7A1E1E),
+              ),
+              child: const Text('Post'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addAnnouncement(String clubName, String message) async {
+    try {
+      final announcementsRef = dbRef.child('announcements');
+      
+      // Create a new announcement with a push key
+      final newAnnouncementRef = announcementsRef.push();
+      
+      await newAnnouncementRef.set({
+        'clubName': clubName,
+        'message': message,
+        'timestamp': ServerValue.timestamp,
+      });
+      
+      debugPrint('Announcement added successfully');
+    } catch (e) {
+      debugPrint('Error adding announcement: $e');
+      rethrow;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
