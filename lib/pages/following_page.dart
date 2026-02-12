@@ -5,17 +5,17 @@ import '../models/club.dart';
 import '../services/user_service.dart';
 import 'club_home_page.dart';
 
-class DiscoveryPage extends StatefulWidget {
-  const DiscoveryPage({super.key});
+class FollowingPage extends StatefulWidget {
+  const FollowingPage({super.key});
 
   @override
-  State<DiscoveryPage> createState() => _DiscoveryPageState();
+  State<FollowingPage> createState() => _FollowingPageState();
 }
 
-class _DiscoveryPageState extends State<DiscoveryPage> {
+class _FollowingPageState extends State<FollowingPage> {
   final dbRef = FirebaseDatabase.instance.ref();
 
-  List<Club> clubs = [];
+  List<Club> allClubs = [];
   Set<String> followedClubIds = {};
   bool isLoading = true;
   String searchQuery = '';
@@ -67,24 +67,12 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
   void fetchClubs() async {
     try {
       final snapshot = await dbRef.get();
-      debugPrint('=== FETCH CLUBS DEBUG ===');
-      debugPrint('Snapshot exists: ${snapshot.exists}');
 
       if (snapshot.exists) {
         final data = snapshot.value;
-        debugPrint('Data type: ${data.runtimeType}');
-        debugPrint('Data is List: ${data is List}');
-        debugPrint('Data is Map: ${data is Map}');
-
-        if (data is Map) {
-          debugPrint('Map keys: ${data.keys.toList()}');
-        }
-
         final List<Club> loaded = [];
 
         if (data is List) {
-          debugPrint('Data is a List with ${data.length} items');
-
           for (var i = 0; i < data.length; i++) {
             var item = data[i];
             if (item != null) {
@@ -92,11 +80,9 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                 final Map<String, dynamic> clubMap =
                     Map<String, dynamic>.from(item);
                 final name = clubMap['CLUB:'] ?? '';
-                debugPrint('Item $i name: "$name"');
 
                 if (name.toString().isNotEmpty) {
                   loaded.add(Club.fromMap(clubMap));
-                  debugPrint('✓ Added club: $name');
                 }
               } catch (e) {
                 debugPrint('Error processing item $i: $e');
@@ -104,19 +90,15 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
             }
           }
         } else if (data is Map) {
-          debugPrint('Data is a Map with ${data.length} entries');
           data.forEach((key, value) {
-            debugPrint('Processing key: $key');
             if (value != null && value is Map) {
               try {
                 final Map<String, dynamic> clubMap =
                     Map<String, dynamic>.from(value);
                 final name = clubMap['CLUB:'] ?? '';
-                debugPrint('Club $key name: "$name"');
 
                 if (name.toString().isNotEmpty) {
                   loaded.add(Club.fromMap(clubMap));
-                  debugPrint('✓ Added club: $name');
                 }
               } catch (e) {
                 debugPrint('Error processing $key: $e');
@@ -126,29 +108,29 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
         }
 
         setState(() {
-          clubs = loaded;
+          allClubs = loaded;
           isLoading = false;
         });
-
-        debugPrint('=== FINAL: Successfully loaded ${loaded.length} clubs ===');
       } else {
-        debugPrint('Snapshot does not exist!');
         setState(() {
           isLoading = false;
-          clubs = [];
+          allClubs = [];
         });
       }
     } catch (e) {
       debugPrint('Error: $e');
       setState(() {
         isLoading = false;
-        clubs = [];
+        allClubs = [];
       });
     }
   }
 
   List<Club> get filteredClubs {
-    List<Club> filtered = clubs;
+    // Only show clubs that are in the followed list
+    List<Club> filtered = allClubs
+        .where((club) => followedClubIds.contains(club.name))
+        .toList();
 
     // Apply search filter
     if (searchQuery.isNotEmpty) {
@@ -173,34 +155,10 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
       );
     }
 
-    if (clubs.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'Discover Clubs',
-            style: TextStyle(color: Colors.white),
-          ),
-          backgroundColor: const Color(0xFF7A1E1E),
-          iconTheme: const IconThemeData(color: Colors.white),
-        ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.groups_outlined, size: 64, color: Colors.grey),
-              SizedBox(height: 16),
-              Text('No clubs found',
-                  style: TextStyle(fontSize: 18, color: Colors.grey)),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Discover Clubs',
+          'Following',
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: const Color(0xFF7A1E1E),
@@ -209,56 +167,58 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
       ),
       body: Column(
         children: [
-          Container(
-            color: const Color(0xFF7A1E1E),
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: TextField(
-              onChanged: (value) => setState(() => searchQuery = value),
-              decoration: InputDecoration(
-                hintText: 'Search clubs...',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+          if (followedClubIds.isNotEmpty)
+            Container(
+              color: const Color(0xFF7A1E1E),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: TextField(
+                onChanged: (value) => setState(() => searchQuery = value),
+                decoration: InputDecoration(
+                  hintText: 'Search your clubs...',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Text(
-                  '${filteredClubs.length} clubs',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
+          if (followedClubIds.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Text(
+                    '${filteredClubs.length} clubs',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           Expanded(
-            child: filteredClubs.isEmpty
+            child: followedClubIds.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.search_off,
+                        Icon(Icons.favorite_border,
                             size: 64, color: Colors.grey[400]),
                         const SizedBox(height: 16),
                         Text(
-                          'No clubs found',
+                          'No favorited clubs yet',
                           style:
                               TextStyle(fontSize: 18, color: Colors.grey[600]),
                         ),
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
-                            'Try a different search term',
+                            'Go to Discovery to find clubs to follow',
                             style: TextStyle(
                                 fontSize: 14, color: Colors.grey[500]),
                           ),
@@ -266,21 +226,45 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                       ],
                     ),
                   )
-                : GridView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4, // 4 per row
-                      childAspectRatio: 1, // Square
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
-                    itemCount: filteredClubs.length,
-                    itemBuilder: (context, index) {
-                      final club = filteredClubs[index];
-                      return _buildClubCard(club);
-                    },
-                  ),
+                : filteredClubs.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.search_off,
+                                size: 64, color: Colors.grey[400]),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No clubs found',
+                              style: TextStyle(
+                                  fontSize: 18, color: Colors.grey[600]),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                'Try a different search term',
+                                style: TextStyle(
+                                    fontSize: 14, color: Colors.grey[500]),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : GridView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4,
+                          childAspectRatio: 1,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                        itemCount: filteredClubs.length,
+                        itemBuilder: (context, index) {
+                          final club = filteredClubs[index];
+                          return _buildClubCard(club);
+                        },
+                      ),
           ),
         ],
       ),

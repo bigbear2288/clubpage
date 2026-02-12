@@ -27,7 +27,7 @@ class Club {
 
   factory Club.fromMap(Map<String, dynamic> data) {
     return Club(
-      name: data['name'] ?? '',
+      name: data['CLUB:'] ?? data['name'] ?? '',
       advisor1: data['advisor1'],
       advisor2: data['advisor2'],
       head1: data['head1'],
