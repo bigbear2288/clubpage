@@ -183,14 +183,23 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
           backgroundColor: const Color(0xFF7A1E1E),
           iconTheme: const IconThemeData(color: Colors.white),
         ),
-        body: const Center(
+        body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.groups_outlined, size: 64, color: Colors.grey),
-              SizedBox(height: 16),
-              Text('No clubs found',
-                  style: TextStyle(fontSize: 18, color: Colors.grey)),
+              Icon(
+                Icons.groups_outlined,
+                size: MediaQuery.of(context).size.width < 600 ? 64 : 80,
+                color: Colors.grey,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No clubs found',
+                style: TextStyle(
+                  fontSize: MediaQuery.of(context).size.width < 600 ? 18 : 22,
+                  color: Colors.grey,
+                ),
+              ),
             ],
           ),
         ),
@@ -211,29 +220,48 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
         children: [
           Container(
             color: const Color(0xFF7A1E1E),
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            padding: EdgeInsets.fromLTRB(
+              MediaQuery.of(context).size.width < 600 ? 16 : 24,
+              0,
+              MediaQuery.of(context).size.width < 600 ? 16 : 24,
+              MediaQuery.of(context).size.width < 600 ? 16 : 20,
+            ),
             child: TextField(
               onChanged: (value) => setState(() => searchQuery = value),
               decoration: InputDecoration(
                 hintText: 'Search clubs...',
-                prefixIcon: const Icon(Icons.search),
+                hintStyle: TextStyle(
+                  fontSize: MediaQuery.of(context).size.width < 600 ? 14 : 16,
+                ),
+                prefixIcon: Icon(
+                  Icons.search,
+                  size: MediaQuery.of(context).size.width < 600 ? 20 : 24,
+                ),
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
+                contentPadding: EdgeInsets.symmetric(
+                  vertical: MediaQuery.of(context).size.width < 600 ? 12 : 16,
+                ),
+              ),
+              style: TextStyle(
+                fontSize: MediaQuery.of(context).size.width < 600 ? 14 : 16,
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(
+              MediaQuery.of(context).size.width < 600 ? 16 : 20,
+            ),
             child: Row(
               children: [
                 Text(
                   '${filteredClubs.length} clubs',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: MediaQuery.of(context).size.width < 600 ? 14 : 16,
                     color: Colors.grey[600],
                     fontWeight: FontWeight.w500,
                   ),
@@ -247,38 +275,66 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.search_off,
-                            size: 64, color: Colors.grey[400]),
+                        Icon(
+                          Icons.search_off,
+                          size:
+                              MediaQuery.of(context).size.width < 600 ? 64 : 80,
+                          color: Colors.grey[400],
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'No clubs found',
-                          style:
-                              TextStyle(fontSize: 18, color: Colors.grey[600]),
+                          style: TextStyle(
+                            fontSize: MediaQuery.of(context).size.width < 600
+                                ? 18
+                                : 22,
+                            color: Colors.grey[600],
+                          ),
                         ),
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
                             'Try a different search term',
                             style: TextStyle(
-                                fontSize: 14, color: Colors.grey[500]),
+                              fontSize: MediaQuery.of(context).size.width < 600
+                                  ? 14
+                                  : 16,
+                              color: Colors.grey[500],
+                            ),
                           ),
                         ),
                       ],
                     ),
                   )
-                : GridView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4, // 4 per row
-                      childAspectRatio: 1, // Square
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
-                    itemCount: filteredClubs.length,
-                    itemBuilder: (context, index) {
-                      final club = filteredClubs[index];
-                      return _buildClubCard(club);
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      // Determine columns based on screen width
+                      int crossAxisCount;
+                      if (constraints.maxWidth < 600) {
+                        crossAxisCount = 2; // Phone
+                      } else if (constraints.maxWidth < 900) {
+                        crossAxisCount = 3; // Tablet portrait
+                      } else {
+                        crossAxisCount = 4; // Tablet landscape / Desktop
+                      }
+
+                      return GridView.builder(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: constraints.maxWidth < 600 ? 16 : 24,
+                        ),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          childAspectRatio: 0.85,
+                          crossAxisSpacing:
+                              constraints.maxWidth < 600 ? 12 : 16,
+                          mainAxisSpacing: constraints.maxWidth < 600 ? 12 : 16,
+                        ),
+                        itemCount: filteredClubs.length,
+                        itemBuilder: (context, index) {
+                          final club = filteredClubs[index];
+                          return _buildClubCard(club, constraints.maxWidth);
+                        },
+                      );
                     },
                   ),
           ),
@@ -287,8 +343,20 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
     );
   }
 
-  Widget _buildClubCard(Club club) {
+  Widget _buildClubCard(Club club, double screenWidth) {
     final isFollowing = followedClubIds.contains(club.name);
+
+    // Calculate responsive sizes based on screen width
+    double clubNameFontSize =
+        screenWidth < 600 ? 12 : (screenWidth < 900 ? 13 : 14);
+    double advisorLabelFontSize =
+        screenWidth < 600 ? 9 : (screenWidth < 900 ? 10 : 11);
+    double advisorNameFontSize =
+        screenWidth < 600 ? 11 : (screenWidth < 900 ? 12 : 13);
+    double advisor2FontSize =
+        screenWidth < 600 ? 10 : (screenWidth < 900 ? 11 : 12);
+    double iconSize = screenWidth < 600 ? 16 : (screenWidth < 900 ? 18 : 20);
+    double cardPadding = screenWidth < 600 ? 12 : (screenWidth < 900 ? 14 : 16);
 
     return GestureDetector(
       onTap: () async {
@@ -324,8 +392,8 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: Text(
                           club.name,
-                          style: const TextStyle(
-                            fontSize: 14,
+                          style: TextStyle(
+                            fontSize: clubNameFontSize,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -345,16 +413,15 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                     decoration: const BoxDecoration(
                       color: Colors.white,
                     ),
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(cardPadding),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (club.advisor1?.isNotEmpty ?? false) ...[
-                          const Text(
+                          Text(
                             'Advisor',
                             style: TextStyle(
-                              fontSize: 9,
+                              fontSize: advisorLabelFontSize,
                               fontWeight: FontWeight.w600,
                               color: Colors.grey,
                               letterSpacing: 0.5,
@@ -363,13 +430,14 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                           const SizedBox(height: 4),
                           Text(
                             club.advisor1!,
-                            style: const TextStyle(
-                              fontSize: 11,
+                            style: TextStyle(
+                              fontSize: advisorNameFontSize,
                               fontWeight: FontWeight.w500,
                               color: Color(0xFF424242),
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
                           ),
                         ],
                         if (club.advisor2?.isNotEmpty ?? false) ...[
@@ -377,46 +445,12 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                           Text(
                             club.advisor2!,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: advisor2FontSize,
                               color: Colors.grey[700],
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                        if (club.head1?.isNotEmpty ?? false) ...[
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Club Head',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            club.head1!,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF424242),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                        if (club.head2?.isNotEmpty ?? false) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            club.head2!,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[700],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ],
@@ -446,7 +480,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                   child: Icon(
                     isFollowing ? Icons.favorite : Icons.favorite_border,
                     color: isFollowing ? Colors.red : Colors.grey[600],
-                    size: 16,
+                    size: iconSize,
                   ),
                 ),
               ),

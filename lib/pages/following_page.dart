@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,32 +21,44 @@ class _FollowingPageState extends State<FollowingPage> {
   bool isLoading = true;
   String searchQuery = '';
 
+  StreamSubscription? _followedClubsSubscription;
+
   @override
   void initState() {
     super.initState();
     fetchClubs();
-    loadFollowedClubs();
+    _listenToFollowedClubs();
   }
 
-  Future<void> loadFollowedClubs() async {
+  @override
+  void dispose() {
+    _followedClubsSubscription?.cancel();
+    super.dispose();
+  }
+
+  // Use a real-time stream so changes from DiscoveryPage reflect instantly
+  void _listenToFollowedClubs() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    try {
-      final userSnapshot = await FirebaseDatabase.instance
-          .ref('users/${user.uid}/followedClubs')
-          .get();
-
-      if (userSnapshot.exists && userSnapshot.value != null) {
-        final List<dynamic> followed = userSnapshot.value as List<dynamic>;
+    _followedClubsSubscription = FirebaseDatabase.instance
+        .ref('users/${user.uid}/followedClubs')
+        .onValue
+        .listen((event) {
+      if (event.snapshot.exists && event.snapshot.value != null) {
+        final List<dynamic> followed = event.snapshot.value as List<dynamic>;
         setState(() {
           followedClubIds =
               followed.where((id) => id != null).cast<String>().toSet();
         });
+      } else {
+        setState(() {
+          followedClubIds = {};
+        });
       }
-    } catch (e) {
-      debugPrint('Error loading followed clubs: $e');
-    }
+    }, onError: (e) {
+      debugPrint('Error listening to followed clubs: $e');
+    });
   }
 
   Future<void> toggleFollow(String clubName) async {
@@ -54,10 +67,9 @@ class _FollowingPageState extends State<FollowingPage> {
     try {
       if (isFollowing) {
         await UserService.unfollowClub(clubName);
-        setState(() => followedClubIds.remove(clubName));
+        // No need to setState — the stream listener will update automatically
       } else {
         await UserService.followClub(clubName);
-        setState(() => followedClubIds.add(clubName));
       }
     } catch (e) {
       debugPrint('Error toggling follow: $e');
@@ -80,7 +92,6 @@ class _FollowingPageState extends State<FollowingPage> {
                 final Map<String, dynamic> clubMap =
                     Map<String, dynamic>.from(item);
                 final name = clubMap['CLUB:'] ?? '';
-
                 if (name.toString().isNotEmpty) {
                   loaded.add(Club.fromMap(clubMap));
                 }
@@ -96,7 +107,6 @@ class _FollowingPageState extends State<FollowingPage> {
                 final Map<String, dynamic> clubMap =
                     Map<String, dynamic>.from(value);
                 final name = clubMap['CLUB:'] ?? '';
-
                 if (name.toString().isNotEmpty) {
                   loaded.add(Club.fromMap(clubMap));
                 }
@@ -127,12 +137,9 @@ class _FollowingPageState extends State<FollowingPage> {
   }
 
   List<Club> get filteredClubs {
-    // Only show clubs that are in the followed list
-    List<Club> filtered = allClubs
-        .where((club) => followedClubIds.contains(club.name))
-        .toList();
+    List<Club> filtered =
+        allClubs.where((club) => followedClubIds.contains(club.name)).toList();
 
-    // Apply search filter
     if (searchQuery.isNotEmpty) {
       filtered = filtered.where((club) {
         return club.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
@@ -141,9 +148,7 @@ class _FollowingPageState extends State<FollowingPage> {
       }).toList();
     }
 
-    // Sort alphabetically
     filtered.sort((a, b) => a.name.compareTo(b.name));
-
     return filtered;
   }
 
@@ -167,33 +172,56 @@ class _FollowingPageState extends State<FollowingPage> {
       ),
       body: Column(
         children: [
+          // Search bar — matches DiscoveryPage exactly
           if (followedClubIds.isNotEmpty)
             Container(
               color: const Color(0xFF7A1E1E),
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: EdgeInsets.fromLTRB(
+                MediaQuery.of(context).size.width < 600 ? 16 : 24,
+                0,
+                MediaQuery.of(context).size.width < 600 ? 16 : 24,
+                MediaQuery.of(context).size.width < 600 ? 16 : 20,
+              ),
               child: TextField(
                 onChanged: (value) => setState(() => searchQuery = value),
                 decoration: InputDecoration(
                   hintText: 'Search your clubs...',
-                  prefixIcon: const Icon(Icons.search),
+                  hintStyle: TextStyle(
+                    fontSize: MediaQuery.of(context).size.width < 600 ? 14 : 16,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: MediaQuery.of(context).size.width < 600 ? 20 : 24,
+                  ),
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
+                  contentPadding: EdgeInsets.symmetric(
+                    vertical: MediaQuery.of(context).size.width < 600 ? 12 : 16,
+                  ),
+                ),
+                style: TextStyle(
+                  fontSize: MediaQuery.of(context).size.width < 600 ? 14 : 16,
                 ),
               ),
             ),
+
+          // Club count — matches DiscoveryPage exactly
           if (followedClubIds.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(
+                MediaQuery.of(context).size.width < 600 ? 16 : 20,
+              ),
               child: Row(
                 children: [
                   Text(
                     '${filteredClubs.length} clubs',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize:
+                          MediaQuery.of(context).size.width < 600 ? 14 : 16,
                       color: Colors.grey[600],
                       fontWeight: FontWeight.w500,
                     ),
@@ -201,26 +229,39 @@ class _FollowingPageState extends State<FollowingPage> {
                 ],
               ),
             ),
+
           Expanded(
             child: followedClubIds.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.favorite_border,
-                            size: 64, color: Colors.grey[400]),
+                        Icon(
+                          Icons.favorite_border,
+                          size:
+                              MediaQuery.of(context).size.width < 600 ? 64 : 80,
+                          color: Colors.grey[400],
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'No favorited clubs yet',
-                          style:
-                              TextStyle(fontSize: 18, color: Colors.grey[600]),
+                          style: TextStyle(
+                            fontSize: MediaQuery.of(context).size.width < 600
+                                ? 18
+                                : 22,
+                            color: Colors.grey[600],
+                          ),
                         ),
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
                             'Go to Discovery to find clubs to follow',
                             style: TextStyle(
-                                fontSize: 14, color: Colors.grey[500]),
+                              fontSize: MediaQuery.of(context).size.width < 600
+                                  ? 14
+                                  : 16,
+                              color: Colors.grey[500],
+                            ),
                           ),
                         ),
                       ],
@@ -231,38 +272,70 @@ class _FollowingPageState extends State<FollowingPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.search_off,
-                                size: 64, color: Colors.grey[400]),
+                            Icon(
+                              Icons.search_off,
+                              size: MediaQuery.of(context).size.width < 600
+                                  ? 64
+                                  : 80,
+                              color: Colors.grey[400],
+                            ),
                             const SizedBox(height: 16),
                             Text(
                               'No clubs found',
                               style: TextStyle(
-                                  fontSize: 18, color: Colors.grey[600]),
+                                fontSize:
+                                    MediaQuery.of(context).size.width < 600
+                                        ? 18
+                                        : 22,
+                                color: Colors.grey[600],
+                              ),
                             ),
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: Text(
                                 'Try a different search term',
                                 style: TextStyle(
-                                    fontSize: 14, color: Colors.grey[500]),
+                                  fontSize:
+                                      MediaQuery.of(context).size.width < 600
+                                          ? 14
+                                          : 16,
+                                  color: Colors.grey[500],
+                                ),
                               ),
                             ),
                           ],
                         ),
                       )
-                    : GridView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          childAspectRatio: 1,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        itemCount: filteredClubs.length,
-                        itemBuilder: (context, index) {
-                          final club = filteredClubs[index];
-                          return _buildClubCard(club);
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          int crossAxisCount;
+                          if (constraints.maxWidth < 600) {
+                            crossAxisCount = 2;
+                          } else if (constraints.maxWidth < 900) {
+                            crossAxisCount = 3;
+                          } else {
+                            crossAxisCount = 4;
+                          }
+
+                          return GridView.builder(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: constraints.maxWidth < 600 ? 16 : 24,
+                            ),
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              childAspectRatio: 0.85,
+                              crossAxisSpacing:
+                                  constraints.maxWidth < 600 ? 12 : 16,
+                              mainAxisSpacing:
+                                  constraints.maxWidth < 600 ? 12 : 16,
+                            ),
+                            itemCount: filteredClubs.length,
+                            itemBuilder: (context, index) {
+                              final club = filteredClubs[index];
+                              return _buildClubCard(club, constraints.maxWidth);
+                            },
+                          );
                         },
                       ),
           ),
@@ -271,8 +344,20 @@ class _FollowingPageState extends State<FollowingPage> {
     );
   }
 
-  Widget _buildClubCard(Club club) {
+  // Identical to DiscoveryPage._buildClubCard
+  Widget _buildClubCard(Club club, double screenWidth) {
     final isFollowing = followedClubIds.contains(club.name);
+
+    double clubNameFontSize =
+        screenWidth < 600 ? 12 : (screenWidth < 900 ? 13 : 14);
+    double advisorLabelFontSize =
+        screenWidth < 600 ? 9 : (screenWidth < 900 ? 10 : 11);
+    double advisorNameFontSize =
+        screenWidth < 600 ? 11 : (screenWidth < 900 ? 12 : 13);
+    double advisor2FontSize =
+        screenWidth < 600 ? 10 : (screenWidth < 900 ? 11 : 12);
+    double iconSize = screenWidth < 600 ? 16 : (screenWidth < 900 ? 18 : 20);
+    double cardPadding = screenWidth < 600 ? 12 : (screenWidth < 900 ? 14 : 16);
 
     return GestureDetector(
       onTap: () async {
@@ -282,7 +367,7 @@ class _FollowingPageState extends State<FollowingPage> {
             builder: (context) => ClubHomePage(club: club),
           ),
         );
-        loadFollowedClubs();
+        // No need to manually reload — stream handles it
       },
       child: Card(
         elevation: 2,
@@ -292,10 +377,9 @@ class _FollowingPageState extends State<FollowingPage> {
         clipBehavior: Clip.antiAlias,
         child: Stack(
           children: [
-            // Main card content
             Column(
               children: [
-                // Maroon header section (1/4 of card)
+                // Maroon header (1/4)
                 Expanded(
                   flex: 1,
                   child: Container(
@@ -308,8 +392,8 @@ class _FollowingPageState extends State<FollowingPage> {
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: Text(
                           club.name,
-                          style: const TextStyle(
-                            fontSize: 14,
+                          style: TextStyle(
+                            fontSize: clubNameFontSize,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -321,7 +405,7 @@ class _FollowingPageState extends State<FollowingPage> {
                     ),
                   ),
                 ),
-                // White background section (3/4 of card)
+                // White body (3/4)
                 Expanded(
                   flex: 3,
                   child: Container(
@@ -329,16 +413,15 @@ class _FollowingPageState extends State<FollowingPage> {
                     decoration: const BoxDecoration(
                       color: Colors.white,
                     ),
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(cardPadding),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (club.advisor1?.isNotEmpty ?? false) ...[
-                          const Text(
+                          Text(
                             'Advisor',
                             style: TextStyle(
-                              fontSize: 9,
+                              fontSize: advisorLabelFontSize,
                               fontWeight: FontWeight.w600,
                               color: Colors.grey,
                               letterSpacing: 0.5,
@@ -347,13 +430,14 @@ class _FollowingPageState extends State<FollowingPage> {
                           const SizedBox(height: 4),
                           Text(
                             club.advisor1!,
-                            style: const TextStyle(
-                              fontSize: 11,
+                            style: TextStyle(
+                              fontSize: advisorNameFontSize,
                               fontWeight: FontWeight.w500,
-                              color: Color(0xFF424242),
+                              color: const Color(0xFF424242),
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
                           ),
                         ],
                         if (club.advisor2?.isNotEmpty ?? false) ...[
@@ -361,46 +445,12 @@ class _FollowingPageState extends State<FollowingPage> {
                           Text(
                             club.advisor2!,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: advisor2FontSize,
                               color: Colors.grey[700],
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                        if (club.head1?.isNotEmpty ?? false) ...[
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Club Head',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            club.head1!,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF424242),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                        if (club.head2?.isNotEmpty ?? false) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            club.head2!,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[700],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ],
@@ -430,7 +480,7 @@ class _FollowingPageState extends State<FollowingPage> {
                   child: Icon(
                     isFollowing ? Icons.favorite : Icons.favorite_border,
                     color: isFollowing ? Colors.red : Colors.grey[600],
-                    size: 16,
+                    size: iconSize,
                   ),
                 ),
               ),
