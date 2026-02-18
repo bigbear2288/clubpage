@@ -55,7 +55,14 @@ class _CalendarPageState extends State<CalendarPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('📅 Club Calendar'),
+        title: const Text(
+          'Calendar',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: const Color(0xFF7A1E1E),
         centerTitle: true,
       ),
@@ -146,7 +153,6 @@ class _CalendarPageState extends State<CalendarPage> {
                 ),
               ),
               const SizedBox(height: 12),
-
               Column(
                 children: upcoming.map((entry) {
                   final club = entry['club'] as Club;

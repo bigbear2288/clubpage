@@ -164,7 +164,11 @@ class _FollowingPageState extends State<FollowingPage> {
       appBar: AppBar(
         title: const Text(
           'Following',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: const Color(0xFF7A1E1E),
         elevation: 0,

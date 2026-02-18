@@ -12,7 +12,7 @@ class AddAnnouncementPage extends StatefulWidget {
 class _AddAnnouncementPageState extends State<AddAnnouncementPage> {
   final _messageController = TextEditingController();
   final dbRef = FirebaseDatabase.instance.ref('announcements');
-  
+
   String? selectedClubName;
   List<Map<String, dynamic>> favoritedClubs = [];
   bool isLoading = true;
@@ -23,44 +23,42 @@ class _AddAnnouncementPageState extends State<AddAnnouncementPage> {
     _fetchFavoritedClubs();
   }
 
-void _fetchFavoritedClubs() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) {
-    setState(() => isLoading = false);
-    return;
-  }
-
-  // Changed from 'favorites' to 'followedClubs'
-  final favoritesRef = FirebaseDatabase.instance
-      .ref('users/${user.uid}/followedClubs');
-
-  favoritesRef.onValue.listen((event) {
-    final data = event.snapshot.value;
-    if (data != null && data is List<dynamic>) {
-      final List<Map<String, dynamic>> clubs = [];
-      
-      // followedClubs is a list of club names (strings)
-      for (var clubName in data) {
-        if (clubName != null && clubName is String) {
-          clubs.add({
-            'name': clubName,
-            'id': clubName,
-          });
-        }
-      }
-
-      setState(() {
-        favoritedClubs = clubs;
-        isLoading = false;
-      });
-    } else {
-      setState(() {
-        favoritedClubs = [];
-        isLoading = false;
-      });
+  void _fetchFavoritedClubs() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() => isLoading = false);
+      return;
     }
-  });
-}
+
+    final favoritesRef =
+        FirebaseDatabase.instance.ref('users/${user.uid}/followedClubs');
+
+    favoritesRef.onValue.listen((event) {
+      final data = event.snapshot.value;
+      if (data != null && data is List<dynamic>) {
+        final List<Map<String, dynamic>> clubs = [];
+
+        for (var clubName in data) {
+          if (clubName != null && clubName is String) {
+            clubs.add({
+              'name': clubName,
+              'id': clubName,
+            });
+          }
+        }
+
+        setState(() {
+          favoritedClubs = clubs;
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          favoritedClubs = [];
+          isLoading = false;
+        });
+      }
+    });
+  }
 
   void _submit() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -98,9 +96,17 @@ void _fetchFavoritedClubs() async {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Add Announcement'),
+        title: const Text(
+          'Post Announcement',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: const Color(0xFF7A1E1E),
         elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -123,7 +129,6 @@ void _fetchFavoritedClubs() async {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Title
                 const Text(
                   'Post an Announcement',
                   style: TextStyle(
@@ -134,15 +139,13 @@ void _fetchFavoritedClubs() async {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Share updates with your club members',
+                  'Any updates?',
                   style: TextStyle(
                     fontSize: 14,
                     color: Color(0xFF5F6368),
                   ),
                 ),
                 const SizedBox(height: 32),
-
-                // Club dropdown
                 if (favoritedClubs.isEmpty)
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -175,7 +178,8 @@ void _fetchFavoritedClubs() async {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    initialValue: selectedClubName,
+                    value: selectedClubName,
+                    isExpanded: true, // prevents right overflow from long names
                     decoration: InputDecoration(
                       hintText: 'Select a club',
                       border: OutlineInputBorder(
@@ -199,7 +203,11 @@ void _fetchFavoritedClubs() async {
                     items: favoritedClubs.map((club) {
                       return DropdownMenuItem<String>(
                         value: club['name'],
-                        child: Text(club['name']),
+                        child: Text(
+                          club['name'],
+                          overflow:
+                              TextOverflow.ellipsis, // truncate if too long
+                        ),
                       );
                     }).toList(),
                     onChanged: (value) {
@@ -209,8 +217,6 @@ void _fetchFavoritedClubs() async {
                     },
                   ),
                   const SizedBox(height: 24),
-
-                  // Announcement message
                   const Text(
                     'Announcement *',
                     style: TextStyle(
@@ -246,8 +252,6 @@ void _fetchFavoritedClubs() async {
                     maxLength: 500,
                   ),
                   const SizedBox(height: 32),
-
-                  // Submit button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
