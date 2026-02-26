@@ -178,7 +178,7 @@ class _AddAnnouncementPageState extends State<AddAnnouncementPage> {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: selectedClubName,
+                    initialValue: selectedClubName,
                     isExpanded: true, // prevents right overflow from long names
                     decoration: InputDecoration(
                       hintText: 'Select a club',
