@@ -13,7 +13,7 @@ class DiscoveryPage extends StatefulWidget {
 }
 
 class _DiscoveryPageState extends State<DiscoveryPage> {
-  final dbRef = FirebaseDatabase.instance.ref();
+  final dbRef = FirebaseDatabase.instance.ref('clubs');
 
   List<Club> clubs = [];
   Set<String> followedClubIds = {};
@@ -106,15 +106,14 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
         } else if (data is Map) {
           debugPrint('Data is a Map with ${data.length} entries');
           data.forEach((key, value) {
-            debugPrint('Processing key: $key');
             if (value != null && value is Map) {
               try {
                 final Map<String, dynamic> clubMap =
                     Map<String, dynamic>.from(value);
-                final name = clubMap['CLUB:'] ?? '';
-                debugPrint('Club $key name: "$name"');
+                clubMap['name'] = key.toString(); // ✅ add this line
+                final name = key.toString(); // ✅ change this too
 
-                if (name.toString().isNotEmpty) {
+                if (name.isNotEmpty) {
                   loaded.add(Club.fromMap(clubMap));
                   debugPrint('✓ Added club: $name');
                 }
@@ -178,11 +177,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
         appBar: AppBar(
           title: const Text(
             'Discover Clubs',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Colors.white),
           ),
           backgroundColor: const Color(0xFF7A1E1E),
           iconTheme: const IconThemeData(color: Colors.white),
@@ -214,11 +209,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
       appBar: AppBar(
         title: const Text(
           'Discover Clubs',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white),
         ),
         backgroundColor: const Color(0xFF7A1E1E),
         elevation: 0,

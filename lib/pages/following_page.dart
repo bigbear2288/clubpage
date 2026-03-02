@@ -14,7 +14,7 @@ class FollowingPage extends StatefulWidget {
 }
 
 class _FollowingPageState extends State<FollowingPage> {
-  final dbRef = FirebaseDatabase.instance.ref();
+  final dbRef = FirebaseDatabase.instance.ref('clubs');
 
   List<Club> allClubs = [];
   Set<String> followedClubIds = {};
@@ -91,6 +91,7 @@ class _FollowingPageState extends State<FollowingPage> {
               try {
                 final Map<String, dynamic> clubMap =
                     Map<String, dynamic>.from(item);
+                debugPrint('All keys in clubMap: ${clubMap.keys.toList()}');
                 final name = clubMap['CLUB:'] ?? '';
                 if (name.toString().isNotEmpty) {
                   loaded.add(Club.fromMap(clubMap));
@@ -106,9 +107,12 @@ class _FollowingPageState extends State<FollowingPage> {
               try {
                 final Map<String, dynamic> clubMap =
                     Map<String, dynamic>.from(value);
-                final name = clubMap['CLUB:'] ?? '';
-                if (name.toString().isNotEmpty) {
+                clubMap['name'] = key.toString(); // ✅ add this line
+                final name = key.toString(); // ✅ change this too
+
+                if (name.isNotEmpty) {
                   loaded.add(Club.fromMap(clubMap));
+                  debugPrint('✓ Added club: $name');
                 }
               } catch (e) {
                 debugPrint('Error processing $key: $e');
