@@ -17,29 +17,59 @@ class _ClubHomePageState extends State<ClubHomePage> {
   bool isAdmin = false;
   late Club club;
 
-  final _scheduleController = TextEditingController();
-  final _timeController = TextEditingController();
-  final _roomController = TextEditingController();
+  // Block schedule config
+  static const List<String> blocks = [
+    'A',
+    'B',
+    'C',
+    'D',
+    'E',
+    'F',
+    'G',
+    'H',
+    'Activities'
+  ];
+
+  static const Map<String, Color> blockColors = {
+    'A': Color(0xFFEF9A9A),
+    'B': Color(0xFFFFCC80),
+    'C': Color(0xFFFFF59D),
+    'D': Color(0xFFA5D6A7),
+    'E': Color(0xFF90CAF9),
+    'F': Color(0xFFCE93D8),
+    'G': Color(0xFF80DEEA),
+    'H': Color(0xFFFFAB91),
+    'Activities': Color(0xFFB0BEC5),
+  };
 
   @override
   void initState() {
     super.initState();
     club = widget.club;
     _checkAdminStatus();
-  }
-
-  @override
-  void dispose() {
-    _scheduleController.dispose();
-    _timeController.dispose();
-    _roomController.dispose();
-    super.dispose();
+    _listenToClubUpdates();
   }
 
   Future<void> _checkAdminStatus() async {
     final adminClubs = await RoleService.getAdminClubs();
+    if (!mounted) return;
     setState(() {
       isAdmin = adminClubs.contains(club.name);
+    });
+  }
+
+  // Realtime listener so all users see updates instantly
+  void _listenToClubUpdates() {
+    FirebaseDatabase.instance.ref('clubs/${club.name}').onValue.listen((event) {
+      if (!mounted) return;
+      final data = event.snapshot.value;
+      if (data is Map) {
+        final clubMap = Map<String, dynamic>.from(data);
+        clubMap['name'] = club.name;
+        setState(() {
+          club = Club.fromMap(clubMap);
+        });
+      }
     });
   }
 
@@ -65,30 +95,8 @@ class _ClubHomePageState extends State<ClubHomePage> {
               await FirebaseDatabase.instance
                   .ref('clubs/${club.name}/$fieldKey')
                   .set(controller.text.trim());
-
-              setState(() {
-                club = Club(
-                  name: club.name,
-                  advisor1: club.advisor1,
-                  advisor2: club.advisor2,
-                  head1: club.head1,
-                  head2: club.head2,
-                  head3: club.head3,
-                  head4: club.head4,
-                  emailHead1: club.emailHead1,
-                  emailHead2: club.emailHead2,
-                  emailHead3: club.emailHead3,
-                  emailHead4: club.emailHead4,
-                  room: fieldKey == 'room' ? controller.text.trim() : club.room,
-                  schedule: fieldKey == 'schedule'
-                      ? controller.text.trim()
-                      : club.schedule,
-                  time: fieldKey == 'time' ? controller.text.trim() : club.time,
-                  description: club.description,
-                );
-              });
-
               Navigator.pop(context);
+              // _listenToClubUpdates handles UI update
             },
             child: const Text('Save', style: TextStyle(color: Colors.white)),
           ),
@@ -139,31 +147,68 @@ class _ClubHomePageState extends State<ClubHomePage> {
               onPressed: () async {
                 final newSchedule =
                     days.where((d) => selected.contains(d)).join(', ');
-
                 await FirebaseDatabase.instance
                     .ref('clubs/${club.name}/schedule')
                     .set(newSchedule);
+                Navigator.pop(context);
+              },
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                setState(() {
-                  club = Club(
-                    name: club.name,
-                    advisor1: club.advisor1,
-                    advisor2: club.advisor2,
-                    head1: club.head1,
-                    head2: club.head2,
-                    head3: club.head3,
-                    head4: club.head4,
-                    emailHead1: club.emailHead1,
-                    emailHead2: club.emailHead2,
-                    emailHead3: club.emailHead3,
-                    emailHead4: club.emailHead4,
-                    room: club.room,
-                    schedule: newSchedule,
-                    time: club.time,
-                    description: club.description,
-                  );
-                });
-
+  void _editBlock() {
+    String? selectedBlock = club.meetingBlock;
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Edit Meeting Block'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: blocks.map((block) {
+              final color = blockColors[block] ?? Colors.grey[200]!;
+              return RadioListTile<String>(
+                title: Row(
+                  children: [
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                        '$block Block${block == 'Activities' ? ' (Wed only)' : ''}'),
+                  ],
+                ),
+                value: block,
+                groupValue: selectedBlock,
+                activeColor: maroonColor,
+                onChanged: (val) {
+                  setDialogState(() => selectedBlock = val);
+                },
+              );
+            }).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: maroonColor),
+              onPressed: () async {
+                if (selectedBlock != null) {
+                  await FirebaseDatabase.instance
+                      .ref('clubs/${club.name}/block')
+                      .set(selectedBlock);
+                }
                 Navigator.pop(context);
               },
               child: const Text('Save', style: TextStyle(color: Colors.white)),
@@ -176,6 +221,10 @@ class _ClubHomePageState extends State<ClubHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final blockColor = club.meetingBlock != null
+        ? blockColors[club.meetingBlock] ?? Colors.grey[200]!
+        : null;
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -204,7 +253,7 @@ class _ClubHomePageState extends State<ClubHomePage> {
                     radius: 40,
                     backgroundColor: Colors.white,
                     child: Text(
-                      club.name.isNotEmpty ? club.name[0].toUpperCase() : "?",
+                      club.name.isNotEmpty ? club.name[0].toUpperCase() : '?',
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -214,7 +263,7 @@ class _ClubHomePageState extends State<ClubHomePage> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    club.name.isNotEmpty ? club.name : "Unknown Club",
+                    club.name.isNotEmpty ? club.name : 'Unknown Club',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -222,6 +271,25 @@ class _ClubHomePageState extends State<ClubHomePage> {
                     ),
                     textAlign: TextAlign.center,
                   ),
+                  if (club.meetingBlock != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: blockColor?.withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${club.meetingBlock} Block${club.meetingBlock == 'Activities' ? ' (Wednesdays)' : ''}',
+                        style: const TextStyle(
+                          color: Color(0xFF424242),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                   if (isAdmin) ...[
                     const SizedBox(height: 8),
                     Container(
@@ -272,6 +340,15 @@ class _ClubHomePageState extends State<ClubHomePage> {
                             ? () => _editField('Room', 'room', club.room)
                             : null,
                       ),
+                      _buildEditableRow(
+                        Icons.grid_view,
+                        'Block',
+                        club.meetingBlock != null
+                            ? '${club.meetingBlock} Block'
+                            : null,
+                        blockColor: blockColor,
+                        onEdit: isAdmin ? () => _editBlock() : null,
+                      ),
                     ],
                   ),
 
@@ -303,9 +380,17 @@ class _ClubHomePageState extends State<ClubHomePage> {
                     title: 'Faculty Advisors',
                     icon: Icons.school,
                     children: [
-                      _buildAdvisorTile(club.advisor1),
+                      _buildAdvisorTile(
+                        club.advisor1,
+                        club.emailAdvisor1,
+                        emailFieldKey: 'email_advisor1',
+                      ),
                       if (club.advisor2 != null && club.advisor2!.isNotEmpty)
-                        _buildAdvisorTile(club.advisor2),
+                        _buildAdvisorTile(
+                          club.advisor2,
+                          club.emailAdvisor2,
+                          emailFieldKey: 'email_advisor2',
+                        ),
                     ],
                   ),
                 ],
@@ -352,6 +437,7 @@ class _ClubHomePageState extends State<ClubHomePage> {
     String label,
     String? value, {
     VoidCallback? onEdit,
+    Color? blockColor,
   }) {
     if ((value == null || value.isEmpty) && onEdit == null) {
       return const SizedBox.shrink();
@@ -373,15 +459,32 @@ class _ClubHomePageState extends State<ClubHomePage> {
                         color: Colors.grey[600],
                         fontWeight: FontWeight.w500)),
                 const SizedBox(height: 2),
-                Text(
-                  value?.isNotEmpty == true ? value! : 'Not set',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: value?.isNotEmpty == true
-                        ? Colors.black
-                        : Colors.grey[400],
+                if (blockColor != null && value != null)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: blockColor,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      value,
+                      style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF424242)),
+                    ),
+                  )
+                else
+                  Text(
+                    value?.isNotEmpty == true ? value! : 'Not set',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: value?.isNotEmpty == true
+                          ? Colors.black
+                          : Colors.grey[400],
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -405,7 +508,7 @@ class _ClubHomePageState extends State<ClubHomePage> {
           CircleAvatar(
             backgroundColor: maroonColor.withOpacity(0.1),
             child: Text(
-              name.isNotEmpty ? name[0].toUpperCase() : '?',
+              name[0].toUpperCase(),
               style: const TextStyle(
                   color: maroonColor, fontWeight: FontWeight.bold),
             ),
@@ -418,7 +521,6 @@ class _ClubHomePageState extends State<ClubHomePage> {
                 Text(name,
                     style: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 2),
                 Text(role,
                     style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                 if (email != null && email.isNotEmpty)
@@ -432,16 +534,56 @@ class _ClubHomePageState extends State<ClubHomePage> {
     );
   }
 
-  Widget _buildAdvisorTile(String? name) {
+  Widget _buildAdvisorTile(String? name, String? email,
+      {String? emailFieldKey}) {
     if (name == null || name.isEmpty) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
+      padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
         children: [
-          Icon(Icons.person, size: 20, color: Colors.grey[600]),
+          CircleAvatar(
+            backgroundColor: Colors.grey[200],
+            child: Text(
+              name[0].toUpperCase(),
+              style: TextStyle(
+                  color: Colors.grey[700], fontWeight: FontWeight.bold),
+            ),
+          ),
           const SizedBox(width: 12),
-          Text(name, style: const TextStyle(fontSize: 16)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600)),
+                const Text('Advisor',
+                    style: TextStyle(fontSize: 12, color: Colors.grey)),
+                if (email != null && email.isNotEmpty)
+                  Text(email,
+                      style: const TextStyle(fontSize: 12, color: maroonColor)),
+                if ((email == null || email.isEmpty) &&
+                    isAdmin &&
+                    emailFieldKey != null)
+                  GestureDetector(
+                    onTap: () =>
+                        _editField('Advisor Email', emailFieldKey, email),
+                    child: const Text('+ Add email',
+                        style: TextStyle(fontSize: 12, color: maroonColor)),
+                  ),
+              ],
+            ),
+          ),
+          if (isAdmin &&
+              emailFieldKey != null &&
+              email != null &&
+              email.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.edit, size: 18, color: maroonColor),
+              onPressed: () =>
+                  _editField('Advisor Email', emailFieldKey, email),
+            ),
         ],
       ),
     );
