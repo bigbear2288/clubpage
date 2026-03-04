@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 class RoleService {
-  // Returns list of club names the current user is head/advisor of
   static Future<List<String>> getAdminClubs() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return [];
@@ -20,10 +19,19 @@ class RoleService {
       final club = Map<String, dynamic>.from(value);
       final clubName = key.toString();
 
-      // Check head emails
+      // Check all four head emails
       final email1 = (club['email_head1'] ?? '').toString().toLowerCase();
       final email2 = (club['email_head2'] ?? '').toString().toLowerCase();
-      if (email1 == userEmail || email2 == userEmail) {
+      final email3 =
+          (club['email_head3'] ?? '').toString().toLowerCase(); // ADD
+      final email4 =
+          (club['email_head4'] ?? '').toString().toLowerCase(); // ADD
+
+      if (email1 == userEmail ||
+          email2 == userEmail ||
+          email3 == userEmail || // ADD
+          email4 == userEmail) {
+        // ADD
         adminClubs.add(clubName);
         return;
       }
@@ -44,7 +52,6 @@ class RoleService {
       }
     });
 
-    // Save to Firebase so it's remembered
     await FirebaseDatabase.instance
         .ref('users/${user.uid}/adminClubs')
         .set(adminClubs);
