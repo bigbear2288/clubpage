@@ -20,21 +20,37 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
   Set<String> followedClubIds = {};
   bool isLoading = true;
   String searchQuery = '';
-
-  // clubName -> latest announcement message
   Map<String, String> latestAnnouncements = {};
 
   @override
   void initState() {
     super.initState();
     fetchClubs();
-    loadFollowedClubs();
-    _subscribeToAnnouncements();
+    listenToFollowedClubs();
+    listenToAnnouncements();
   }
 
-  /// Single listener on the root `announcements` node.
-  /// Any time any announcement is added/changed, we rebuild the map.
-  void _subscribeToAnnouncements() {
+  void listenToFollowedClubs() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    FirebaseDatabase.instance
+        .ref('users/${user.uid}/followedClubs')
+        .onValue
+        .listen((event) {
+      if (!mounted) return;
+      final data = event.snapshot.value;
+      setState(() {
+        if (data is Map) {
+          followedClubIds = data.keys.cast<String>().toSet();
+        } else {
+          followedClubIds = {};
+        }
+      });
+    });
+  }
+
+  void listenToAnnouncements() {
     announcementsRef.onValue.listen((event) {
       if (!mounted) return;
 
@@ -44,7 +60,6 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
         return;
       }
 
-      // Map: clubName -> {timestamp, message}
       final Map<String, Map<String, dynamic>> best = {};
 
       void process(dynamic value) {
@@ -57,7 +72,9 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
         if (clubName == null ||
             clubName.isEmpty ||
             message == null ||
-            message.isEmpty) return;
+            message.isEmpty) {
+          return;
+        }
 
         if (!best.containsKey(clubName) ||
             tsInt > (best[clubName]!['ts'] as int)) {
@@ -77,45 +94,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
         latestAnnouncements =
             best.map((k, v) => MapEntry(k, v['message'] as String));
       });
-    }, onError: (e) {
-      debugPrint('Error listening to announcements: $e');
     });
-  }
-
-  Future<void> loadFollowedClubs() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    try {
-      final userSnapshot = await FirebaseDatabase.instance
-          .ref('users/${user.uid}/followedClubs')
-          .get();
-
-      if (userSnapshot.exists && userSnapshot.value != null) {
-        final List<dynamic> followed = userSnapshot.value as List<dynamic>;
-        setState(() {
-          followedClubIds =
-              followed.where((id) => id != null).cast<String>().toSet();
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading followed clubs: $e');
-    }
-  }
-
-  Future<void> toggleFollow(String clubName) async {
-    final isFollowing = followedClubIds.contains(clubName);
-    try {
-      if (isFollowing) {
-        await UserService.unfollowClub(clubName);
-        setState(() => followedClubIds.remove(clubName));
-      } else {
-        await UserService.followClub(clubName);
-        setState(() => followedClubIds.add(clubName));
-      }
-    } catch (e) {
-      debugPrint('Error toggling follow: $e');
-    }
   }
 
   void fetchClubs() {
@@ -169,6 +148,19 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
     });
   }
 
+  Future<void> toggleFollow(String clubName) async {
+    final isFollowing = followedClubIds.contains(clubName);
+    try {
+      if (isFollowing) {
+        await UserService.unfollowClub(clubName);
+      } else {
+        await UserService.followClub(clubName);
+      }
+    } catch (e) {
+      debugPrint('Error toggling follow: $e');
+    }
+  }
+
   List<Club> get filteredClubs {
     List<Club> filtered = clubs;
     if (searchQuery.isNotEmpty) {
@@ -195,6 +187,12 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
               style: TextStyle(color: Colors.white)),
           backgroundColor: const Color(0xFF7A1E1E),
           iconTheme: const IconThemeData(color: Colors.white),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout, color: Colors.white),
+              onPressed: () async => await FirebaseAuth.instance.signOut(),
+            ),
+          ],
         ),
         body: Center(
           child: Column(
@@ -222,6 +220,12 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
         backgroundColor: const Color(0xFF7A1E1E),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () async => await FirebaseAuth.instance.signOut(),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -357,12 +361,11 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
         screenWidth < 600 ? 9 : (screenWidth < 900 ? 10 : 11);
 
     return GestureDetector(
-      onTap: () async {
-        await Navigator.push(
+      onTap: () {
+        Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => ClubHomePage(club: club)),
         );
-        loadFollowedClubs();
       },
       child: Card(
         elevation: 2,
@@ -406,7 +409,6 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Club heads
                         if (club.head1?.isNotEmpty ?? false) ...[
                           Text(
                             'Club Head',
@@ -418,17 +420,14 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                             ),
                           ),
                           const SizedBox(height: 3),
-                          Text(
-                            club.head1!,
-                            style: TextStyle(
-                              fontSize: advisorNameFontSize,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFF424242),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                          ),
+                          Text(club.head1!,
+                              style: TextStyle(
+                                  fontSize: advisorNameFontSize,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF424242)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center),
                         ],
                         if (club.head2?.isNotEmpty ?? false) ...[
                           const SizedBox(height: 2),
@@ -460,14 +459,12 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center),
                         ],
-                        // Divider before advisor
                         if ((club.head1?.isNotEmpty ?? false) &&
                             (club.advisor1?.isNotEmpty ?? false))
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 4),
                             child: Divider(height: 1, color: Colors.grey[300]),
                           ),
-                        // Advisors
                         if (club.advisor1?.isNotEmpty ?? false) ...[
                           Text(
                             'Advisor',
@@ -479,17 +476,14 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                             ),
                           ),
                           const SizedBox(height: 3),
-                          Text(
-                            club.advisor1!,
-                            style: TextStyle(
-                              fontSize: advisorNameFontSize,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFF424242),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                          ),
+                          Text(club.advisor1!,
+                              style: TextStyle(
+                                  fontSize: advisorNameFontSize,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF424242)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center),
                         ],
                         if (club.advisor2?.isNotEmpty ?? false) ...[
                           const SizedBox(height: 2),
@@ -501,7 +495,6 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center),
                         ],
-                        // Latest announcement
                         if (announcement != null) ...[
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 5),

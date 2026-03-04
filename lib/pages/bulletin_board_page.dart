@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'add_announcement_page.dart';
 import 'dart:math';
 import '../models/club.dart';
+import '../services/role_service.dart';
 
 class BulletinBoardPage extends StatefulWidget {
   final List<Club> clubs;
@@ -16,8 +18,8 @@ class _BulletinBoardPageState extends State<BulletinBoardPage> {
   final dbRef = FirebaseDatabase.instance.ref('announcements');
   List<Map<String, dynamic>> announcements = [];
   bool isLoading = true;
+  bool isAdmin = false;
 
-  // Cute post-it note colors
   final List<Color> postItColors = [
     const Color(0xFFFFF59D), // Yellow
     const Color(0xFFFFCC80), // Orange
@@ -32,9 +34,17 @@ class _BulletinBoardPageState extends State<BulletinBoardPage> {
   void initState() {
     super.initState();
     fetchAnnouncements();
+    _checkAdminStatus();
   }
 
-  void fetchAnnouncements() async {
+  Future<void> _checkAdminStatus() async {
+    final adminClubs = await RoleService.getAdminClubs();
+    setState(() {
+      isAdmin = adminClubs.isNotEmpty;
+    });
+  }
+
+  void fetchAnnouncements() {
     dbRef.onValue.listen((event) {
       final data = event.snapshot.value;
       if (data != null && data is Map<dynamic, dynamic>) {
@@ -46,7 +56,6 @@ class _BulletinBoardPageState extends State<BulletinBoardPage> {
           loaded.add(entry);
         });
 
-        // Sort by timestamp descending (newest first)
         loaded.sort(
             (a, b) => (b['timestamp'] as int).compareTo(a['timestamp'] as int));
 
@@ -68,12 +77,11 @@ class _BulletinBoardPageState extends State<BulletinBoardPage> {
     return "${date.month}/${date.day}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}";
   }
 
-  // Determine the size category based on message length
   int getSizeCategory(String message) {
     final length = message.length;
-    if (length < 50) return 1; // Small
-    if (length < 150) return 2; // Medium
-    return 3; // Large
+    if (length < 50) return 1;
+    if (length < 150) return 2;
+    return 3;
   }
 
   @override
@@ -88,11 +96,10 @@ class _BulletinBoardPageState extends State<BulletinBoardPage> {
     }
 
     return Scaffold(
-      backgroundColor: Color(0xFF7A1E1E),
+      backgroundColor: const Color(0xFF7A1E1E),
       body: SafeArea(
         child: Column(
           children: [
-            // Custom header with title and add button
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
@@ -106,21 +113,32 @@ class _BulletinBoardPageState extends State<BulletinBoardPage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  IconButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AddAnnouncementPage(),
+                  Row(
+                    children: [
+                      if (isAdmin)
+                        IconButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AddAnnouncementPage(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.add_circle,
+                              color: Colors.white, size: 32),
                         ),
-                      );
-                    },
-                    icon: const Icon(Icons.add_circle, color: Colors.white, size: 32),
+                      IconButton(
+                        onPressed: () async {
+                          await FirebaseAuth.instance.signOut();
+                        },
+                        icon: const Icon(Icons.logout, color: Colors.white),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            // Post-it notes grid with dynamic sizing
             Expanded(
               child: Container(
                 decoration: const BoxDecoration(
@@ -140,7 +158,8 @@ class _BulletinBoardPageState extends State<BulletinBoardPage> {
                       )
                     : GridView.builder(
                         padding: const EdgeInsets.all(16),
-                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
                           maxCrossAxisExtent: 200,
                           childAspectRatio: 0.9,
                           crossAxisSpacing: 12,
@@ -151,10 +170,10 @@ class _BulletinBoardPageState extends State<BulletinBoardPage> {
                           final ann = announcements[index];
                           final message = ann['message'] ?? '';
                           final sizeCategory = getSizeCategory(message);
-                          final color = postItColors[index % postItColors.length];
+                          final color =
+                              postItColors[index % postItColors.length];
                           final random = Random(index);
-                          final rotation =
-                              (random.nextDouble() - 0.5) * 0.08; // Slight tilt
+                          final rotation = (random.nextDouble() - 0.5) * 0.08;
 
                           return Transform.rotate(
                             angle: rotation,
@@ -184,7 +203,7 @@ class PostItNote extends StatelessWidget {
   final String message;
   final String timestamp;
   final Color color;
-  final int sizeCategory; // 1 = small, 2 = medium, 3 = large
+  final int sizeCategory;
 
   const PostItNote({
     super.key,
@@ -196,24 +215,23 @@ class PostItNote extends StatelessWidget {
     this.sizeCategory = 2,
   });
 
-  // Get font sizes based on size category
   Map<String, double> getFontSizes() {
     switch (sizeCategory) {
-      case 1: // Small notes - larger text
+      case 1:
         return {
           'clubName': 16.0,
           'postedBy': 12.0,
           'message': 14.0,
           'timestamp': 10.0,
         };
-      case 2: // Medium notes
+      case 2:
         return {
           'clubName': 14.0,
           'postedBy': 11.0,
           'message': 13.0,
           'timestamp': 9.0,
         };
-      case 3: // Large notes
+      case 3:
         return {
           'clubName': 13.0,
           'postedBy': 10.0,
@@ -280,14 +298,12 @@ class PostItNote extends StatelessWidget {
               ),
             ),
           ),
-          // Content
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 8),
-                // Club name
                 Text(
                   clubName,
                   style: TextStyle(
@@ -300,7 +316,6 @@ class PostItNote extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                // Posted by
                 Text(
                   '— $postedBy',
                   style: TextStyle(
@@ -312,7 +327,6 @@ class PostItNote extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
-                // Message
                 Expanded(
                   child: Text(
                     message,
@@ -326,7 +340,6 @@ class PostItNote extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                // Timestamp
                 Text(
                   timestamp,
                   style: TextStyle(

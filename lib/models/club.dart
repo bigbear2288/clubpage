@@ -4,8 +4,8 @@ class Club {
   final String? advisor2;
   final String? head1;
   final String? head2;
-  final String? head3; // ADD
-  final String? head4; // ADD
+  final String? head3;
+  final String? head4;
   final String? emailHead1;
   final String? emailHead2;
   final String? emailHead3;
@@ -13,6 +13,7 @@ class Club {
   final String? room;
   final String? schedule;
   final String? time;
+  final String? description; // ADD
 
   Club({
     required this.name,
@@ -20,8 +21,8 @@ class Club {
     this.advisor2,
     this.head1,
     this.head2,
-    this.head3, // ADD
-    this.head4, // ADD
+    this.head3,
+    this.head4,
     this.emailHead1,
     this.emailHead2,
     this.emailHead3,
@@ -29,6 +30,7 @@ class Club {
     this.room,
     this.schedule,
     this.time,
+    this.description, // ADD
   });
 
   factory Club.fromMap(Map<String, dynamic> data) {
@@ -38,8 +40,8 @@ class Club {
       advisor2: data['advisor2'],
       head1: data['head1'],
       head2: data['head2'],
-      head3: data['head3'], // ADD
-      head4: data['head4'], // ADD
+      head3: data['head3'],
+      head4: data['head4'],
       emailHead1: data['email_head1'],
       emailHead2: data['email_head2'],
       emailHead3: data['email_head3'],
@@ -47,6 +49,7 @@ class Club {
       room: data['room'],
       schedule: data['schedule'],
       time: data['time'],
+      description: data['description'], // ADD
     );
   }
 }

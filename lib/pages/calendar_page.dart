@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/club.dart';
 
 class CalendarPage extends StatefulWidget {
@@ -21,9 +22,6 @@ class _CalendarPageState extends State<CalendarPage> {
     _selectedDay = _focusedDay;
   }
 
-  /// TEMP LOGIC:
-  /// Until schedules are stored in Firebase,
-  /// we’ll just show all clubs on every day.
   List<Club> _meetingsForDay(DateTime day) {
     return widget.clubs;
   }
@@ -65,6 +63,14 @@ class _CalendarPageState extends State<CalendarPage> {
         ),
         backgroundColor: const Color(0xFF7A1E1E),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

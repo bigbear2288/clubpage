@@ -23,40 +23,40 @@ class _AddAnnouncementPageState extends State<AddAnnouncementPage> {
     _fetchFavoritedClubs();
   }
 
-  void _fetchFavoritedClubs() async {
+  void _fetchFavoritedClubs() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       setState(() => isLoading = false);
       return;
     }
 
-    final favoritesRef =
-        FirebaseDatabase.instance.ref('users/${user.uid}/followedClubs');
-
-    favoritesRef.onValue.listen((event) {
+    FirebaseDatabase.instance
+        .ref('users/${user.uid}/followedClubs')
+        .onValue
+        .listen((event) {
+      if (!mounted) return;
       final data = event.snapshot.value;
-      if (data != null && data is List<dynamic>) {
-        final List<Map<String, dynamic>> clubs = [];
+      final List<Map<String, dynamic>> clubs = [];
 
-        for (var clubName in data) {
-          if (clubName != null && clubName is String) {
-            clubs.add({
-              'name': clubName,
-              'id': clubName,
-            });
+      if (data is Map) {
+        data.forEach((key, value) {
+          if (value == true) {
+            clubs.add({'name': key.toString(), 'id': key.toString()});
           }
-        }
-
-        setState(() {
-          favoritedClubs = clubs;
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          favoritedClubs = [];
-          isLoading = false;
         });
       }
+
+      setState(() {
+        favoritedClubs = clubs;
+        if (selectedClubName != null &&
+            !clubs.any((c) => c['name'] == selectedClubName)) {
+          selectedClubName = null;
+        }
+        isLoading = false;
+      });
+    }, onError: (e) {
+      debugPrint('Error fetching followed clubs: $e');
+      setState(() => isLoading = false);
     });
   }
 
