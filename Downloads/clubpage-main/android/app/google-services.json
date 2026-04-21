@@ -1,0 +1,91 @@
+{
+  "project_info": {
+    "project_number": "836584555388",
+    "firebase_url": "https://club-app-d7084-default-rtdb.firebaseio.com",
+    "project_id": "club-app-d7084",
+    "storage_bucket": "club-app-d7084.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:836584555388:android:9624a6ab45718fac015af9",
+        "android_client_info": {
+          "package_name": "com.example.club"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "836584555388-3k2gmn9bfqhphmi8kfmkha4cra3a2jms.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.club",
+            "certificate_hash": "6e3fb1a4d032b77a5c7215585894d627b33e34f3"
+          }
+        },
+        {
+          "client_id": "836584555388-d5t8kctcipke5a5b5gtkh5i7imopvctl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCVk_wg-kj12Ejde5aMt9kY01aHtu4rfjU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "836584555388-d5t8kctcipke5a5b5gtkh5i7imopvctl.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "836584555388-dmiljehd45d55n4ighkjh4db5lcosb3b.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.club"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:836584555388:android:36d4fa1b471ef59b015af9",
+        "android_client_info": {
+          "package_name": "com.example.module"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "836584555388-d5t8kctcipke5a5b5gtkh5i7imopvctl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCVk_wg-kj12Ejde5aMt9kY01aHtu4rfjU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "836584555388-d5t8kctcipke5a5b5gtkh5i7imopvctl.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "836584555388-dmiljehd45d55n4ighkjh4db5lcosb3b.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.club"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
