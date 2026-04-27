@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../services/message_service.dart';
 import '../services/role_service.dart';
@@ -223,6 +224,14 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
         appBar: AppBar(
           title: const Text('Club Messages'),
           backgroundColor: const Color(0xFF7A1E1E),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout, color: Colors.white),
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+              },
+            ),
+          ],
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -233,6 +242,14 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
         appBar: AppBar(
           title: const Text('Club Messages'),
           backgroundColor: const Color(0xFF7A1E1E),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout, color: Colors.white),
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+              },
+            ),
+          ],
         ),
         body: const Center(
           child: Text('You are not an admin for any clubs.'),
@@ -245,6 +262,14 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
         title: const Text('Club Messages'),
         backgroundColor: const Color(0xFF7A1E1E),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [

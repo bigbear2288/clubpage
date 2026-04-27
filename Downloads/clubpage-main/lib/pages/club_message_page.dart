@@ -184,6 +184,14 @@ class _ClubMessagePageState extends State<ClubMessagePage> {
         backgroundColor: clubColor,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+            },
+          ),
+        ],
       ),
       body: _isCheckingAuth
           ? const Center(child: CircularProgressIndicator())

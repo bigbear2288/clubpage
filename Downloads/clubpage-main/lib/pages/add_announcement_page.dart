@@ -98,6 +98,14 @@ class _AddAnnouncementPageState extends State<AddAnnouncementPage> {
         backgroundColor: const Color(0xFF7A1E1E),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+            },
+          ),
+        ],
       ),
       body: Center(
         child: SingleChildScrollView(

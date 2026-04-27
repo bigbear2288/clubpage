@@ -62,22 +62,22 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyAACZhVK_G6VLlvqTz3f2_59mcHWbWSpPQ',
-    appId: '1:836584555388:ios:01faa65a79efa6b9015af9',
+    appId: '1:836584555388:ios:1tsbunv47fk2gooelhh1j98atpsfdpj8',
     messagingSenderId: '836584555388',
     projectId: 'club-app-d7084',
     databaseURL: 'https://club-app-d7084-default-rtdb.firebaseio.com',
     storageBucket: 'club-app-d7084.firebasestorage.app',
-    iosBundleId: 'com.example.club',
+    iosBundleId: 'com.softwarehopkins.nicclubs',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyAACZhVK_G6VLlvqTz3f2_59mcHWbWSpPQ',
-    appId: '1:836584555388:ios:01faa65a79efa6b9015af9',
+    appId: '1:836584555388:ios:1tsbunv47fk2gooelhh1j98atpsfdpj8',
     messagingSenderId: '836584555388',
     projectId: 'club-app-d7084',
     databaseURL: 'https://club-app-d7084-default-rtdb.firebaseio.com',
     storageBucket: 'club-app-d7084.firebasestorage.app',
-    iosBundleId: 'com.example.club',
+    iosBundleId: 'com.softwarehopkins.nicclubs',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

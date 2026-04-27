@@ -29,7 +29,7 @@ class _LoginPageState extends State<LoginPage> {
         userCredential = await _auth.signInWithPopup(googleProvider);
       } else {
         await _googleSignIn
-            .signOut(); // ADD - clears cached account so picker shows
+            .signOut();
         final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
         if (googleUser == null) {
@@ -46,6 +46,7 @@ class _LoginPageState extends State<LoginPage> {
         );
 
         userCredential = await _auth.signInWithCredential(credential);
+        setState(() {});
       }
 
       final String? email = userCredential.user?.email;
@@ -74,7 +75,9 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // Auth successful - main.dart's StreamBuilder will handle navigation
+      if (kIsWeb && mounted) {
+        setState(() {});
+      }
     } catch (e) {
       debugPrint('Error signing in with Google: $e');
       if (mounted) {

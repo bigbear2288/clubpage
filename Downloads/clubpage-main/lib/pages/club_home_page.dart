@@ -498,6 +498,13 @@ class _ClubHomePageState extends State<ClubHomePage> {
               );
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+            },
+          ),
         ],
       ),
       body: SingleChildScrollView(
