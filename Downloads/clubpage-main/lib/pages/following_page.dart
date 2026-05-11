@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/club.dart';
 import '../services/user_service.dart';
 import 'club_home_page.dart';
-import 'login_page.dart';
 
 class FollowingPage extends StatefulWidget {
   const FollowingPage({super.key});

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,7 +11,6 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   bool _isLoading = false;
 
@@ -20,63 +18,26 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      UserCredential userCredential;
-
       if (kIsWeb) {
         await _auth.setPersistence(Persistence.LOCAL);
-        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        final googleProvider = GoogleAuthProvider();
         googleProvider.setCustomParameters({'prompt': 'select_account'});
-        userCredential = await _auth.signInWithPopup(googleProvider);
+        final userCredential = await _auth.signInWithPopup(googleProvider);
+        _processUserCredential(userCredential);
       } else {
-        await _googleSignIn
-            .signOut();
-        final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-
-        if (googleUser == null) {
-          setState(() => _isLoading = false);
-          return;
+        try {
+          final googleProvider = GoogleAuthProvider();
+          googleProvider.setCustomParameters({'prompt': 'select_account'});
+          final userCredential = await _auth.signInWithProvider(googleProvider);
+          _processUserCredential(userCredential);
+        } catch (e) {
+          debugPrint('signInWithProvider failed: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Sign-in error: ${e.toString()}')),
+            );
+          }
         }
-
-        final GoogleSignInAuthentication googleAuth =
-            await googleUser.authentication;
-
-        final credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        );
-
-        userCredential = await _auth.signInWithCredential(credential);
-        setState(() {});
-      }
-
-      final String? email = userCredential.user?.email;
-
-      // Easter egg for ggoodman26
-      if (email == 'ggoodman26@students.hopkins.edu') {
-        if (mounted) {
-          _showBunnyEasterEgg();
-        }
-        return;
-      }
-
-      if (email == null || !email.endsWith('hopkins.edu')) {
-        await _auth.signOut();
-        if (!kIsWeb) await _googleSignIn.signOut();
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Access restricted to Hopkins School users only'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      if (kIsWeb && mounted) {
-        setState(() {});
       }
     } catch (e) {
       debugPrint('Error signing in with Google: $e');
@@ -88,6 +49,33 @@ class _LoginPageState extends State<LoginPage> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _processUserCredential(UserCredential userCredential) async {
+    final String? email = userCredential.user?.email;
+
+    // Easter egg for ggoodman26
+    if (email == 'ggoodman26@students.hopkins.edu') {
+      if (mounted) {
+        _showBunnyEasterEgg();
+      }
+      return;
+    }
+
+    if (email == null || !email.endsWith('hopkins.edu')) {
+      await _auth.signOut();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Access restricted to Hopkins School users only'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (mounted) setState(() {});
   }
 
   void _showBunnyEasterEgg() {
